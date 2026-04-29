@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AirLoo Monitor</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --teal: #00C9A7;
+    --navy: #0B1E36;
+    --navy-mid: #112845;
+    --navy-card: #162F52;
+    --navy-border: #1E3E68;
+    --amber: #FFB547;
+    --rose: #FF5C8A;
+    --sky: #4FC3F7;
+    --text-main: #E8F4FD;
+    --text-muted: #7A9EC5;
+    --text-dim: #4A6A8A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--text-main); min-height: 100vh; }
+  .mono { font-family: 'Space Mono', monospace; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--navy-mid); }
+  ::-webkit-scrollbar-thumb { background: var(--navy-border); border-radius: 3px; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--navy-mid);
+    border-right: 1px solid var(--navy-border);
+    position: fixed; top: 0; left: 0; height: 100vh; width: 220px; z-index: 30;
+    display: flex; flex-direction: column;
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+  }
+  .sidebar.collapsed { transform: translateX(-220px); }
+
+  /* ── MOBILE NAV OVERLAY ── */
+  .mobile-overlay {
+    display: none;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 25;
+    backdrop-filter: blur(2px);
+  }
+  .mobile-overlay.active { display: block; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+    color: var(--text-muted); font-size: 13.5px; font-weight: 500;
+    cursor: pointer; border-radius: 8px; margin: 2px 10px; transition: all 0.2s;
+  }
+  .nav-item:hover { background: var(--navy-card); color: var(--text-main); }
+  .nav-item.active { background: rgba(0,201,167,0.12); color: var(--teal); }
+  .nav-icon { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+
+  /* ── MAIN LAYOUT ── */
+  .main { margin-left: 220px; min-height: 100vh; transition: margin-left 0.3s cubic-bezier(.4,0,.2,1); }
+  .main.full { margin-left: 0; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background: var(--navy-mid); border-bottom: 1px solid var(--navy-border);
+    height: 60px; padding: 0 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 20; gap: 12px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  /* Hamburger button */
+  .menu-btn {
+    display: none;
+    background: var(--navy-card); border: 1px solid var(--navy-border);
+    border-radius: 8px; padding: 7px; cursor: pointer; flex-shrink: 0;
+    color: var(--text-muted); transition: color 0.2s, background 0.2s;
+  }
+  .menu-btn:hover { color: var(--text-main); background: var(--navy-border); }
+  .menu-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; display: block; }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.3);
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--teal);
+    white-space: nowrap;
+  }
+  .status-badge.offline { background: rgba(255,92,138,0.1); border-color: rgba(255,92,138,0.3); color: var(--rose); }
+  .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); animation: pulse-green 1.8s ease-in-out infinite; flex-shrink: 0; }
+  .pulse-dot.offline { background: var(--rose); animation: none; }
+  @keyframes pulse-green {
+    0%,100% { opacity:1; transform:scale(1); box-shadow:0 0 0 0 rgba(0,201,167,0.4); }
+    50% { opacity:0.8; transform:scale(1.1); box-shadow:0 0 0 6px rgba(0,201,167,0); }
+  }
+
+  .card { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 14px; padding: 20px; }
+  .stat-value { font-family: 'Space Mono', monospace; font-size: 2rem; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; }
+  .chip-online { background: rgba(0,201,167,0.12); color: var(--teal); border: 1px solid rgba(0,201,167,0.2); }
+  .chip-sky { background: rgba(79,195,247,0.1); color: var(--sky); border: 1px solid rgba(79,195,247,0.2); }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--navy-border); }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(30,62,104,0.5); }
+  .data-table tr:last-child td { border: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .alert-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(30,62,104,0.5); }
+  .alert-item:last-child { border: none; padding-bottom: 0; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .heatmap-cell { border-radius: 3px; height: 22px; cursor: pointer; transition: transform 0.15s; }
+  .heatmap-cell:hover { transform: scale(1.15); }
+  .scroll-panel { max-height: 260px; overflow-y: auto; overflow-x: auto; }
+  .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .fade-in-1{animation-delay:0.05s} .fade-in-2{animation-delay:0.1s}
+  .fade-in-3{animation-delay:0.15s} .fade-in-4{animation-delay:0.2s}
+  .fade-in-5{animation-delay:0.25s} .fade-in-6{animation-delay:0.3s}
+  .spinner { width:18px; height:18px; border:2px solid rgba(0,201,167,0.2); border-top-color:var(--teal); border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-banner { background:rgba(255,92,138,0.1); border:1px solid rgba(255,92,138,0.3); border-radius:10px; padding:10px 16px; font-size:13px; color:var(--rose); display:none; margin-bottom:16px; align-items:center; gap:8px; }
+
+  /* ── RESPONSIVE: KPI grid ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .heatmap-stats-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; }
+  .log-alerts-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--navy-mid); border-top: 1px solid var(--navy-border);
+    padding: 16px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; color: var(--text-muted);
+    flex-wrap: wrap; gap: 12px;
+  }
+
+  /* ────────────────────────────────────────────
+     TABLET  ≤ 1024px
+  ──────────────────────────────────────────── */
+  @media (max-width: 1024px) {
+    .sidebar { transform: translateX(-220px); }
+    .menu-btn { display: flex; }
+    .main { margin-left: 0; }
+    .sidebar.open { transform: translateX(0); }
+
+    .chart-grid { grid-template-columns: 1fr 1fr; }
+    .chart-grid > .card:first-child { grid-column: span 2; }
+    .heatmap-stats-grid { grid-template-columns: 1fr 1fr; }
+    .log-alerts-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ────────────────────────────────────────────
+     MOBILE  ≤ 640px
+  ──────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .topbar { padding: 0 16px; height: 56px; }
+    .p-6 { padding: 14px !important; }
+    .space-y-5 > * + * { margin-top: 14px !important; }
+
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .chart-grid { grid-template-columns: 1fr; gap: 10px; }
+    .chart-grid > .card:first-child { grid-column: span 1; }
+    .heatmap-stats-grid { grid-template-columns: 1fr; gap: 10px; }
+    .log-alerts-grid { grid-template-columns: 1fr; gap: 10px; }
+
+    .card { padding: 14px; border-radius: 12px; }
+    .stat-value { font-size: 1.5rem; }
+
+    /* Welcome banner */
+    .welcome-banner { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+    .welcome-actions { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+
+    /* Topbar sync text: hide on small screens */
+    .sync-text { display: none !important; }
+
+    /* Status badge: shorten */
+    .badge-text { display: none; }
+
+    /* Footer: stack */
+    .footer { flex-direction: column; align-items: flex-start; padding: 14px 16px; text-align: left; }
+    .footer-center { display: none; }
+
+    /* Heatmap label overflow fix */
+    #heatmap-grid { overflow-x: auto; }
+    .heatmap-labels { font-size: 9px !important; }
+
+    /* Table horizontal scroll */
+    .scroll-panel { max-height: 220px; }
+
+    /* Donut layout on mobile */
+    .donut-inner { flex-direction: row !important; align-items: center !important; gap: 16px; }
+    .donut-inner canvas { width: 90px !important; height: 90px !important; flex-shrink: 0; }
+  }
+
+  /* ────────────────────────────────────────────
+     VERY SMALL  ≤ 380px
+  ──────────────────────────────────────────── */
+  @media (max-width: 380px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-value { font-size: 1.25rem; }
+    .card { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Mobile overlay -->
+<div class="mobile-overlay" id="mobile-overlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div style="padding:24px 20px;border-bottom:1px solid var(--navy-border)">
+    <div class="flex items-center gap-3">
+<div style="
+  width:38px;
+  height:38px;
+  border-radius:10px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+">
+  <img src="none.png" style="width:100%;height:100%;object-fit:cover;" />
+</div>
+      <div>
+        <div class="font-bold text-sm tracking-wide">AirLoo</div>
+        <div style="font-size:11px;color:var(--text-muted)">powered by Circuitbay</div>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 py-4">
+    <div style="font-size:10px;color:var(--text-dim);padding:6px 20px 4px;text-transform:uppercase;letter-spacing:0.1em">Main</div>
+    <div class="nav-item active">
+      <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analytics
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Alerts
+    </div>
+    <div style="font-size:10px;color:var(--text-dim);padding:14px 20px 4px;text-transform:uppercase;letter-spacing:0.1em">System</div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Devices
+    </div>
+  </nav>
+  <div style="padding:16px;border-top:1px solid var(--navy-border)">
+    <div class="flex items-center gap-3">
+      <div style="width:32px;height:32px;border-radius:8px;background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">👤</div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;">Admin</div>
+        <div style="font-size:11px;color:var(--text-muted)" id="sidebar-device">Door_1</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main" id="main-content">
+  <div class="topbar">
+    <div class="topbar-left">
+      <!-- Hamburger -->
+      <button class="menu-btn" id="menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div style="min-width:0">
+        <div class="font-semibold text-sm">Dashboard</div>
+        <div id="live-time" style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;"></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div id="sync-indicator" class="flex items-center gap-2 sync-text" style="font-size:12px;color:var(--text-muted)">
+        <div class="spinner"></div> <span>Connecting...</span>
+      </div>
+      <div id="conn-badge" class="status-badge offline">
+        <div class="pulse-dot offline"></div>
+        <span class="badge-text">Connecting</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-6 space-y-5">
+
+    <!-- Error banner -->
+    <div id="error-banner" class="error-banner">
+      <span>⚠️</span><span id="error-msg">Could not reach Firestore.</span>
+    </div>
+
+    <!-- Welcome -->
+    <div class="fade-in fade-in-1 welcome-banner flex items-center justify-between"
+      style="background:linear-gradient(135deg,rgba(0,201,167,0.1),rgba(0,201,167,0.03));border:1px solid rgba(0,201,167,0.2);border-radius:14px;padding:16px 20px">
+      <div>
+        <div class="font-semibold" style="font-size:15px;">Hi, Welcome back! 👋</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:2px">
+          Monitoring <strong style="color:var(--teal)" id="device-label"></strong> · ESP32 → Firestore
+        </div>
+      </div>
+      <div class="welcome-actions flex items-center gap-3">
+        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">Auto-refresh: 10s</span>
+        <button onclick="fetchData()" style="background:var(--teal);color:#000;font-weight:700;font-size:13px;padding:9px 16px;border-radius:10px;border:none;cursor:pointer;white-space:nowrap;">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+      <div class="card fade-in fade-in-1">
+        <div class="stat-label mb-2">🚪 Total Opens</div>
+        <div class="stat-value" id="kpi-opens" style="color:var(--teal)">--</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:8px">from latest openCount</div>
+      </div>
+      <div class="card fade-in fade-in-2">
+        <div class="stat-label mb-2">🔒 Total Closes</div>
+        <div class="stat-value" id="kpi-closes" style="color:var(--sky)">--</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:8px">from latest closeCount</div>
+      </div>
+      <div class="card fade-in fade-in-3">
+        <div class="stat-label mb-2">📊 Sessions</div>
+        <div class="stat-value" id="kpi-sessions" style="color:var(--amber)">--</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:8px">min(opens, closes)</div>
+      </div>
+      <div class="card fade-in fade-in-4">
+        <div class="stat-label mb-2">⚡ Last Event</div>
+        <div id="kpi-last-event" class="stat-value" style="font-size:1.3rem">--</div>
+        <div id="kpi-last-time" style="font-size:11px;color:var(--text-muted);margin-top:8px;font-family:'Space Mono',monospace">--</div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="chart-grid">
+      <div class="card fade-in fade-in-2" style="grid-column:span 2">
+        <div class="flex items-center justify-between mb-4" style="gap:12px;flex-wrap:wrap;">
+          <div>
+            <div class="font-semibold text-sm">📈 Door Activity — Hourly</div>
+            <div style="font-size:12px;color:var(--text-muted)">OPEN vs CLOSE events by hour</div>
+          </div>
+          <div class="flex gap-3" style="font-size:12px;">
+            <span style="color:var(--teal)">● Opens</span>
+            <span style="color:var(--sky)">● Closes</span>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <div style="min-width:280px;">
+            <canvas id="hourlyChart" height="110"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card fade-in fade-in-3">
+        <div class="font-semibold text-sm mb-1">🔄 Event Split</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Opens vs Closes proportion</div>
+        <div class="donut-inner flex flex-col items-center">
+          <canvas id="donutChart" width="120" height="120"></canvas>
+          <div class="space-y-3 mt-4 w-full">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2"><div style="width:10px;height:10px;border-radius:2px;background:var(--teal)"></div><span style="font-size:13px">Opens</span></div>
+              <span class="mono font-bold" id="donut-opens">--</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2"><div style="width:10px;height:10px;border-radius:2px;background:var(--sky)"></div><span style="font-size:13px">Closes</span></div>
+              <span class="mono font-bold" id="donut-closes">--</span>
+            </div>
+            <div style="border-top:1px solid var(--navy-border);padding-top:10px">
+              <div style="font-size:12px;color:var(--text-muted)">Device</div>
+              <div class="mono font-bold" id="donut-device" style="color:var(--teal);font-size:13px">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HEATMAP + STATS -->
+    <div class="heatmap-stats-grid">
+      <div class="card fade-in fade-in-4">
+        <div class="font-semibold text-sm mb-1">🔥 Peak Hour Heatmap</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">OPEN events per hour of day (all-time)</div>
+        <div id="heatmap-grid" style="overflow-x:auto;"></div>
+        <div class="flex justify-between mt-2 heatmap-labels" style="font-size:10.5px;color:var(--text-dim);">
+          <span>12am</span><span>3am</span><span>6am</span><span>9am</span><span>12pm</span><span>3pm</span><span>6pm</span><span>9pm</span><span>11pm</span>
+        </div>
+        <div class="flex items-center gap-2 mt-3" style="font-size:11px;">
+          <span style="color:var(--text-muted)">Low</span>
+          <div style="height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,rgba(0,201,167,0.08),var(--teal))"></div>
+          <span style="color:var(--text-muted)">High</span>
+        </div>
+      </div>
+
+      <div class="card fade-in fade-in-4">
+        <div class="font-semibold text-sm mb-4">📊 Quick Stats</div>
+        <div class="space-y-4">
+          <div style="background:rgba(0,201,167,0.06);border:1px solid rgba(0,201,167,0.15);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Total Docs in Firestore</div>
+            <div class="mono font-bold" style="font-size:1.6rem;color:var(--teal)" id="stat-total">--</div>
+          </div>
+          <div style="background:rgba(79,195,247,0.06);border:1px solid rgba(79,195,247,0.15);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Peak Hour (Most Opens)</div>
+            <div class="mono font-bold" style="font-size:1.4rem;color:var(--sky)" id="stat-peak">--</div>
+          </div>
+          <div style="background:rgba(255,181,71,0.06);border:1px solid rgba(255,181,71,0.15);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Last Synced</div>
+            <div class="mono font-bold" style="font-size:1rem;color:var(--amber)" id="stat-sync">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVENT LOG + ALERTS -->
+    <div class="log-alerts-grid">
+      <div class="card fade-in fade-in-5">
+        <div class="flex items-center justify-between mb-3" style="flex-wrap:wrap;gap:8px;">
+          <div>
+            <div class="font-semibold text-sm">📋 Firestore Event Log</div>
+            <div style="font-size:12px;color:var(--text-muted)">All 5 fields: event · openCount · closeCount · device · timestamp</div>
+          </div>
+          <span id="log-count" class="chip chip-online">0 records</span>
+        </div>
+        <div class="scroll-panel">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Opens</th>
+                <th>Closes</th>
+                <th>Device</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="event-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:24px">
+                <div class="spinner" style="margin:0 auto 8px"></div>Fetching from Firestore...
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card fade-in fade-in-6">
+        <div class="font-semibold text-sm mb-1">🔔 Smart Alerts</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Generated from live Firestore data</div>
+        <div id="alerts-feed">
+          <div class="alert-item">
+            <div class="alert-dot" style="background:var(--text-dim)"></div>
+            <div style="font-size:13px;color:var(--text-muted)">Awaiting data...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .p-6 -->
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="flex items-center gap-3">
+      <div style="
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+">
+  <img src="none.png" style="width:100%;height:100%;object-fit:cover;" />
+</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-main)">AirLoo</div>
+        <div style="font-size:11px;">by Circuitbay</div>
+      </div>
+    </div>
+    <div class="footer-center" style="text-align:center;font-size:11.5px;">
+      Smart Sanitation • Real-time Monitoring • IoT Powered
+    </div>
+    <div style="font-size:11px;">
+      © 2026 AirLoo • Built by Circuitbay
+    </div>
+  </footer>
+</main>
+
+<script>
+// ─────────────────────────────────────────────
+//  SIDEBAR TOGGLE (mobile)
+// ─────────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const overlay = document.getElementById('mobile-overlay');
+  sb.classList.toggle('open');
+  overlay.classList.toggle('active');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('mobile-overlay').classList.remove('active');
+}
+// Close sidebar on nav item click (mobile)
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    if (window.innerWidth <= 1024) closeSidebar();
+  });
+});
+
+// ─────────────────────────────────────────────
+//  YOUR FIREBASE CONFIG
+// ─────────────────────────────────────────────
+const PROJECT_ID = "esp32-demo-project-47c9e";
+const API_KEY    = "AIzaSyC82xou5F2ljcPZtpDcpbNQ8BI0Yn1_fWg";
+const COLLECTION = "events";
+const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+
+// ─────────────────────────────────────────────
+//  CHARTS  (initialized empty)
+// ─────────────────────────────────────────────
+const hourlyChart = new Chart(
+  document.getElementById('hourlyChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: Array.from({length:24}, (_,i) => `${i}:00`),
+      datasets: [
+        { label:'Opens',  data: new Array(24).fill(0), borderColor:'#00C9A7', backgroundColor:'rgba(0,201,167,0.08)', tension:0.4, fill:true, pointRadius:3, borderWidth:2 },
+        { label:'Closes', data: new Array(24).fill(0), borderColor:'#4FC3F7', backgroundColor:'rgba(79,195,247,0.06)',  tension:0.4, fill:true, pointRadius:3, borderWidth:2 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins: { legend:{display:false}, tooltip:{ backgroundColor:'#162F52', titleColor:'#E8F4FD', bodyColor:'#7A9EC5', borderColor:'#1E3E68', borderWidth:1 } },
+      scales: {
+        x: { ticks:{color:'#4A6A8A',font:{size:10},maxTicksLimit:8}, grid:{color:'rgba(30,62,104,0.4)'} },
+        y: { ticks:{color:'#4A6A8A',font:{size:10}}, grid:{color:'rgba(30,62,104,0.4)'}, beginAtZero:true }
+      }
+    }
+});
+
+const donutChart = new Chart(
+  document.getElementById('donutChart').getContext('2d'), {
+    type: 'doughnut',
+    data: { datasets:[{ data:[1,1], backgroundColor:['#00C9A7','#4FC3F7'], borderWidth:0, hoverOffset:4 }] },
+    options: { cutout:'70%', plugins:{legend:{display:false}, tooltip:{enabled:false}} }
+});
+
+// ─────────────────────────────────────────────
+//  PARSE FIRESTORE TIMESTAMP FIELD
+// ─────────────────────────────────────────────
+function parseTS(tsValue) {
+  if (!tsValue) return null;
+  if (typeof tsValue === 'string') return new Date(tsValue);
+  if (tsValue.seconds) return new Date(tsValue.seconds * 1000);
+  return null;
+}
+
+// ─────────────────────────────────────────────
+//  FETCH ALL DOCUMENTS (paginated up to 300)
+// ─────────────────────────────────────────────
+async function fetchAllDocs() {
+  let docs = [], pageToken = null;
+  do {
+    let url = `${FS_BASE}/${COLLECTION}?key=${API_KEY}&pageSize=100`;
+    if (pageToken) url += `&pageToken=${pageToken}`;
+    const res = await fetch(url);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
+    const json = await res.json();
+    if (json.documents) docs = docs.concat(json.documents);
+    pageToken = json.nextPageToken || null;
+  } while (pageToken && docs.length < 300);
+  return docs;
+}
+
+// ─────────────────────────────────────────────
+//  MAIN FETCH + RENDER
+// ─────────────────────────────────────────────
+async function fetchData() {
+  document.getElementById('sync-indicator').innerHTML = '<div class="spinner"></div>&nbsp;<span>Syncing...</span>';
+
+  try {
+    const rawDocs = await fetchAllDocs();
+
+    const docs = rawDocs.map(d => {
+      const f = d.fields || {};
+      return {
+        event:      f.event?.stringValue      || '?',
+        openCount:  parseInt(f.openCount?.integerValue  ?? 0),
+        closeCount: parseInt(f.closeCount?.integerValue ?? 0),
+        device:     f.device?.stringValue     || 'unknown',
+        timestamp:  parseTS(f.timestamp?.timestampValue)
+      };
+    }).filter(d => d.timestamp);
+
+    docs.sort((a,b) => b.timestamp - a.timestamp);
+
+    setOnline(true);
+    hideError();
+    render(docs);
+
+  } catch(err) {
+    setOnline(false);
+    showError(err.message);
+    console.error(err);
+  }
+
+  const t = new Date().toLocaleTimeString('en-IN');
+  document.getElementById('sync-indicator').innerHTML = `<span style="font-size:11.5px;color:var(--text-muted)">Last sync: ${t}</span>`;
+  document.getElementById('stat-sync').textContent = t;
+}
+
+// ─────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────
+function render(docs) {
+  if (!docs.length) {
+    document.getElementById('event-tbody').innerHTML =
+      `<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:24px">No documents found in the "${COLLECTION}" collection.</td></tr>`;
+    return;
+  }
+
+  const latest = docs[0];
+
+  document.getElementById('kpi-opens').textContent    = latest.openCount;
+  document.getElementById('kpi-closes').textContent   = latest.closeCount;
+  document.getElementById('kpi-sessions').textContent = Math.min(latest.openCount, latest.closeCount);
+  document.getElementById('kpi-last-event').textContent = latest.event;
+  document.getElementById('kpi-last-event').style.color = latest.event === 'OPEN' ? 'var(--teal)' : 'var(--sky)';
+  document.getElementById('kpi-last-time').textContent  = latest.timestamp.toLocaleString('en-IN');
+  document.getElementById('device-label').textContent   = latest.device;
+  document.getElementById('sidebar-device').textContent = latest.device;
+  document.getElementById('donut-device').textContent   = latest.device;
+  document.getElementById('donut-opens').textContent    = latest.openCount;
+  document.getElementById('donut-closes').textContent   = latest.closeCount;
+  document.getElementById('stat-total').textContent     = docs.length;
+  document.getElementById('log-count').textContent      = `${docs.length} records`;
+
+  donutChart.data.datasets[0].data = [latest.openCount || 1, latest.closeCount || 1];
+  donutChart.update('none');
+
+  const hOpens  = new Array(24).fill(0);
+  const hCloses = new Array(24).fill(0);
+  docs.forEach(d => {
+    const h = d.timestamp.getHours();
+    if (d.event === 'OPEN')  hOpens[h]++;
+    else if (d.event === 'CLOSE') hCloses[h]++;
+  });
+  hourlyChart.data.datasets[0].data = hOpens;
+  hourlyChart.data.datasets[1].data = hCloses;
+  hourlyChart.update('none');
+
+  const maxH = Math.max(...hOpens, 1);
+  document.getElementById('heatmap-grid').innerHTML =
+    `<div style="display:grid;grid-template-columns:repeat(24,1fr);gap:3px;min-width:300px;">` +
+    hOpens.map((v,h) =>
+      `<div class="heatmap-cell" title="${h}:00 — ${v} opens"
+        style="background:rgba(0,201,167,${(0.07 + (v/maxH)*0.9).toFixed(2)})"></div>`
+    ).join('') + `</div>`;
+
+  const peakH = hOpens.indexOf(Math.max(...hOpens));
+  document.getElementById('stat-peak').textContent = `${peakH}:00 – ${peakH+1}:00`;
+
+  document.getElementById('event-tbody').innerHTML = docs.slice(0,50).map(d => {
+    const badge = d.event === 'OPEN'
+      ? `<span class="chip chip-online">🚪 OPEN</span>`
+      : `<span class="chip chip-sky">🔒 CLOSE</span>`;
+    return `<tr>
+      <td>${badge}</td>
+      <td class="mono" style="color:var(--teal)">${d.openCount}</td>
+      <td class="mono" style="color:var(--sky)">${d.closeCount}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${d.device}</td>
+      <td class="mono" style="font-size:11px;color:var(--text-muted)">
+        ${d.timestamp.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+      </td>
+    </tr>`;
+  }).join('');
+
+  const opens = latest.openCount, closes = latest.closeCount;
+  const sessions = Math.min(opens, closes);
+  const alerts = [];
+
+  alerts.push({ c:'var(--teal)', title:'✅ Firestore Connected',
+    msg:`Fetched ${docs.length} documents from <strong>${latest.device}</strong>.` });
+
+  if (opens > closes + 1)
+    alerts.push({ c:'var(--amber)', title:'⚠️ Door May Be Open',
+      msg:`openCount (${opens}) exceeds closeCount (${closes}) — a close event may be missing.` });
+
+  if (sessions >= 20 && sessions < 50)
+    alerts.push({ c:'var(--amber)', title:'🧹 Cleaning Recommended',
+      msg:`${sessions} sessions completed. Schedule maintenance soon.` });
+
+  if (sessions >= 50)
+    alerts.push({ c:'var(--rose)', title:'🚨 High Usage Alert',
+      msg:`${sessions} sessions — facility under heavy load.` });
+
+  const ageMin = Math.round((Date.now() - latest.timestamp) / 60000);
+  if (ageMin > 60)
+    alerts.push({ c:'var(--sky)', title:'🔇 No Recent Activity',
+      msg:`Last event was ${ageMin} minutes ago. Device may be idle or offline.` });
+
+  document.getElementById('alerts-feed').innerHTML = alerts.map(a =>
+    `<div class="alert-item">
+      <div class="alert-dot" style="background:${a.c}"></div>
+      <div>
+        <div style="font-size:13px;font-weight:600;">${a.title}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${a.msg}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────
+function setOnline(ok) {
+  const badge = document.getElementById('conn-badge');
+  badge.className = ok ? 'status-badge' : 'status-badge offline';
+  badge.innerHTML = ok
+    ? `<div class="pulse-dot"></div><span class="badge-text">Live</span>`
+    : `<div class="pulse-dot offline"></div><span class="badge-text">Offline</span>`;
+}
+function showError(msg) {
+  const b = document.getElementById('error-banner');
+  document.getElementById('error-msg').textContent = `Firestore error: ${msg}`;
+  b.style.display = 'flex';
+}
+function hideError() { document.getElementById('error-banner').style.display = 'none'; }
+
+// ─────────────────────────────────────────────
+//  CLOCK + INIT
+// ─────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('live-time').textContent =
+    new Date().toLocaleString('en-IN',{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+fetchData();
+setInterval(fetchData, 10000);
+</script>
+</body>
+</html>
