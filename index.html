@@ -74,18 +74,31 @@ nav {
   background: rgba(11,30,54,0.7);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(30,62,104,0.5);
+
 }
+
+
 .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .nav-logo-icon {
-  width: 40px; height: 40px;
-  background: linear-gradient(135deg, #00C9A7, #00F5D4);
+  width: 20px; height: 20px;
+  /* background: linear-gradient(135deg, #00C9A7, #00F5D4); */
   border-radius: 11px;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px;
   box-shadow: 0 0 20px rgba(0,201,167,0.35);
 }
+.nav-logo-icon img{
+  height: 40px;
+}
+
+.logo-section{
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
 .nav-logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; color: var(--text-main); letter-spacing: -0.02em; }
-.nav-logo-sub  { font-size: 11px; color: var(--text-muted); font-family: 'DM Sans', sans-serif; }
+.nav-logo-sub  { font-size: 11px; text-decoration:none; color: var(--text-muted); font-family: 'DM Sans', sans-serif; }
 .nav-links { display: flex; align-items: center; gap: 8px; }
 .nav-link {
   padding: 8px 16px; border-radius: 8px;
@@ -488,13 +501,18 @@ footer {
 
 <!-- NAV -->
 <nav>
-  <a class="nav-logo" href="#">
-    <div class="nav-logo-icon"></div>
-    <div>
+
+<div class="logo-section">
+    <a href="" class="nav-logo-icon">
+      <img src="/none.png" alt="" >
+    </a>
+
+    <div class="">
       <div class="nav-logo-text">AirLoo</div>
-      <div class="nav-logo-sub">by Circuitbay</div>
+      <a href="https://circuitbay.org" class="nav-logo-sub">by Circuitbay</a>
     </div>
-  </a>
+</div>
+
   <div class="nav-links">
     <a class="nav-link" href="#features">Features</a>
     <a class="nav-link" href="#how">How It Works</a>
