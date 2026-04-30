@@ -376,17 +376,30 @@
     <!-- HEATMAP + STATS -->
     <div class="heatmap-stats-grid">
       <div class="card fade-in fade-in-4">
-        <div class="font-semibold text-sm mb-1">🔥 Peak Hour Heatmap</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">OPEN events per hour of day (all-time)</div>
+
+        <!-- ── CHANGED: GitHub-style heatmap ── -->
+        <div class="flex items-center justify-between mb-1" style="flex-wrap:wrap;gap:8px;">
+          <div class="font-semibold text-sm">🔥 Activity Heatmap</div>
+          <span id="heatmap-range" style="font-size:11px;color:var(--text-dim);font-family:'Space Mono',monospace;"></span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">OPEN events · GitHub-style · last 16 weeks</div>
         <div id="heatmap-grid" style="overflow-x:auto;"></div>
-        <div class="flex justify-between mt-2 heatmap-labels" style="font-size:10.5px;color:var(--text-dim);">
-          <span>12am</span><span>3am</span><span>6am</span><span>9am</span><span>12pm</span><span>3pm</span><span>6pm</span><span>9pm</span><span>11pm</span>
+        <div class="flex items-center justify-between mt-3">
+          <div class="flex items-center gap-2" style="font-size:11px;">
+            <span style="color:var(--text-muted)">Less</span>
+            <div style="display:flex;gap:3px;">
+              <div style="width:11px;height:11px;border-radius:2px;background:rgba(0,201,167,0.07);border:1px solid rgba(0,201,167,0.15);"></div>
+              <div style="width:11px;height:11px;border-radius:2px;background:rgba(0,201,167,0.22);"></div>
+              <div style="width:11px;height:11px;border-radius:2px;background:rgba(0,201,167,0.45);"></div>
+              <div style="width:11px;height:11px;border-radius:2px;background:rgba(0,201,167,0.70);"></div>
+              <div style="width:11px;height:11px;border-radius:2px;background:#00C9A7;"></div>
+            </div>
+            <span style="color:var(--text-muted)">More</span>
+          </div>
+          <span id="heatmap-total" style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;"></span>
         </div>
-        <div class="flex items-center gap-2 mt-3" style="font-size:11px;">
-          <span style="color:var(--text-muted)">Low</span>
-          <div style="height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,rgba(0,201,167,0.08),var(--teal))"></div>
-          <span style="color:var(--text-muted)">High</span>
-        </div>
+        <!-- ── END CHANGED ── -->
+
       </div>
 
       <div class="card fade-in fade-in-4">
@@ -397,7 +410,7 @@
             <div class="mono font-bold" style="font-size:1.6rem;color:var(--teal)" id="stat-total">--</div>
           </div>
           <div style="background:rgba(79,195,247,0.06);border:1px solid rgba(79,195,247,0.15);border-radius:10px;padding:14px">
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Peak Hour (Most Opens)</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Busiest Day (Most Opens)</div>
             <div class="mono font-bold" style="font-size:1.4rem;color:var(--sky)" id="stat-peak">--</div>
           </div>
           <div style="background:rgba(255,181,71,0.06);border:1px solid rgba(255,181,71,0.15);border-radius:10px;padding:14px">
@@ -644,16 +657,104 @@ function render(docs) {
   hourlyChart.data.datasets[1].data = hCloses;
   hourlyChart.update('none');
 
-  const maxH = Math.max(...hOpens, 1);
-  document.getElementById('heatmap-grid').innerHTML =
-    `<div style="display:grid;grid-template-columns:repeat(24,1fr);gap:3px;min-width:300px;">` +
-    hOpens.map((v,h) =>
-      `<div class="heatmap-cell" title="${h}:00 — ${v} opens"
-        style="background:rgba(0,201,167,${(0.07 + (v/maxH)*0.9).toFixed(2)})"></div>`
-    ).join('') + `</div>`;
+  // ── CHANGED: GitHub-style contribution heatmap (16 weeks × 7 days) ──
+  const WEEKS = 16;
+  const MONTH_NAMES    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAY_NAMES_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-  const peakH = hOpens.indexOf(Math.max(...hOpens));
-  document.getElementById('stat-peak').textContent = `${peakH}:00 – ${peakH+1}:00`;
+  // Map "YYYY-MM-DD" → number of OPEN events that day
+  const dayMap = {};
+  docs.forEach(d => {
+    if (d.event !== 'OPEN') return;
+    const key = d.timestamp.toISOString().slice(0, 10);
+    dayMap[key] = (dayMap[key] || 0) + 1;
+  });
+  const maxVal = Math.max(...Object.values(dayMap), 1);
+
+  // Rewind to the Sunday that starts our 16-week window
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - startDate.getDay() - (WEEKS - 1) * 7);
+  startDate.setHours(0, 0, 0, 0);
+
+  // 5-tier teal colour scale (like GitHub's green scale)
+  function cellColor(v) {
+    if (!v)       return 'rgba(0,201,167,0.07)';
+    const r = v / maxVal;
+    if (r < 0.20) return 'rgba(0,201,167,0.22)';
+    if (r < 0.40) return 'rgba(0,201,167,0.45)';
+    if (r < 0.65) return 'rgba(0,201,167,0.65)';
+    if (r < 0.85) return 'rgba(0,201,167,0.85)';
+    return '#00C9A7';
+  }
+
+  // ── Month label row ──
+  let monthHTML = '<div style="display:flex;margin-left:28px;margin-bottom:4px;">';
+  let lastMonth = -1;
+  for (let w = 0; w < WEEKS; w++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + w * 7);
+    const m = d.getMonth();
+    if (m !== lastMonth) {
+      monthHTML += `<div style="flex:1;font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;">${MONTH_NAMES[m]}</div>`;
+      lastMonth = m;
+    } else {
+      monthHTML += `<div style="flex:1;"></div>`;
+    }
+  }
+  monthHTML += '</div>';
+
+  // ── Day labels + cell grid ──
+  let gridHTML = '<div style="display:flex;gap:0;">';
+
+  // Day-of-week labels (Mon / Wed / Fri only, like GitHub)
+  gridHTML += '<div style="display:flex;flex-direction:column;gap:3px;margin-right:5px;padding-top:0;">';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((lbl, i) => {
+    const show = (i === 1 || i === 3 || i === 5);
+    gridHTML += `<div style="height:13px;line-height:13px;font-size:9px;
+      color:${show ? 'var(--text-dim)' : 'transparent'};
+      font-family:'Space Mono',monospace;">${lbl}</div>`;
+  });
+  gridHTML += '</div>';
+
+  // Week columns (left = oldest, right = newest)
+  let windowTotal = 0;
+  for (let w = 0; w < WEEKS; w++) {
+    gridHTML += '<div style="display:flex;flex-direction:column;gap:3px;margin-right:3px;">';
+    for (let dow = 0; dow < 7; dow++) {
+      const cellDate = new Date(startDate);
+      cellDate.setDate(cellDate.getDate() + w * 7 + dow);
+      const isFuture = cellDate > today;
+      const key = cellDate.toISOString().slice(0, 10);
+      const v   = dayMap[key] || 0;
+      windowTotal += v;
+      const label  = cellDate.toLocaleDateString('en-IN', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+      const title  = isFuture ? `${label} — future` : `${label} — ${v} open${v !== 1 ? 's' : ''}`;
+      const bg     = isFuture ? 'rgba(0,0,0,0)' : cellColor(v);
+      const border = (!v && !isFuture) ? '1px solid rgba(0,201,167,0.13)' : 'none';
+      gridHTML += `<div title="${title}"
+        style="width:13px;height:13px;border-radius:2px;background:${bg};border:${border};
+               flex-shrink:0;cursor:${isFuture ? 'default' : 'pointer'};transition:transform 0.12s;"
+        onmouseover="if(!${isFuture})this.style.transform='scale(1.5)'"
+        onmouseout="this.style.transform='scale(1)'"></div>`;
+    }
+    gridHTML += '</div>';
+  }
+  gridHTML += '</div>';
+
+  document.getElementById('heatmap-grid').innerHTML = monthHTML + gridHTML;
+
+  const fmt = d => d.toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
+  document.getElementById('heatmap-range').textContent = `${fmt(startDate)} – ${fmt(today)}`;
+  document.getElementById('heatmap-total').textContent = `${windowTotal} opens in range`;
+
+  // Busiest day of week (all-time, for Quick Stats)
+  const wOpens = new Array(7).fill(0);
+  docs.forEach(d => { if (d.event === 'OPEN') wOpens[d.timestamp.getDay()]++; });
+  const peakDay = wOpens.indexOf(Math.max(...wOpens));
+  document.getElementById('stat-peak').textContent = DAY_NAMES_FULL[peakDay];
+  // ── END CHANGED ──
 
   document.getElementById('event-tbody').innerHTML = docs.slice(0,50).map(d => {
     const badge = d.event === 'OPEN'
