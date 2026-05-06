@@ -1,837 +1,823 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>AirLoo Monitor</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirLoo · Circuitbay</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --teal: #00C9A7;
-    --navy: #0B1E36;
-    --navy-mid: #112845;
-    --navy-card: #162F52;
-    --navy-border: #1E3E68;
-    --amber: #FFB547;
-    --rose: #FF5C8A;
-    --sky: #4FC3F7;
-    --text-main: #E8F4FD;
-    --text-muted: #7A9EC5;
-    --text-dim: #4A6A8A;
+    --bg: #0d1b2a;
+    --surface: #112236;
+    --card: #152840;
+    --border: #1e3a56;
+    --cyan: #00d4c8;
+    --amber: #f0a500;
+    --green: #2ecc71;
+    --red: #ff4757;
+    --text: #cde4f5;
+    --muted: #6b8fa8;
+    --open-bg: #1a3020;
+    --open-fg: #2ecc71;
+    --close-bg: #1a2640;
+    --close-fg: #00d4c8;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--text-main); min-height: 100vh; }
-  .mono { font-family: 'Space Mono', monospace; }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--navy-mid); }
-  ::-webkit-scrollbar-thumb { background: var(--navy-border); border-radius: 3px; }
 
-  /* ── SIDEBAR ── */
-  .sidebar {
-    background: var(--navy-mid);
-    border-right: 1px solid var(--navy-border);
-    position: fixed; top: 0; left: 0; height: 100vh; width: 220px; z-index: 30;
-    display: flex; flex-direction: column;
-    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
-  }
-  .sidebar.collapsed { transform: translateX(-220px); }
-
-  /* ── MOBILE NAV OVERLAY ── */
-  .mobile-overlay {
-    display: none;
-    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 25;
-    backdrop-filter: blur(2px);
-  }
-  .mobile-overlay.active { display: block; }
-
-  .nav-item {
-    display: flex; align-items: center; gap: 10px; padding: 10px 20px;
-    color: var(--text-muted); font-size: 13.5px; font-weight: 500;
-    cursor: pointer; border-radius: 8px; margin: 2px 10px; transition: all 0.2s;
-  }
-  .nav-item:hover { background: var(--navy-card); color: var(--text-main); }
-  .nav-item.active { background: rgba(0,201,167,0.12); color: var(--teal); }
-  .nav-icon { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
-
-  /* ── MAIN LAYOUT ── */
-  .main { margin-left: 220px; min-height: 100vh; transition: margin-left 0.3s cubic-bezier(.4,0,.2,1); }
-  .main.full { margin-left: 0; }
-
-  /* ── TOPBAR ── */
-  .topbar {
-    background: var(--navy-mid); border-bottom: 1px solid var(--navy-border);
-    height: 60px; padding: 0 28px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 20; gap: 12px;
-  }
-  .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-  .topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-  /* Hamburger button */
-  .menu-btn {
-    display: none;
-    background: var(--navy-card); border: 1px solid var(--navy-border);
-    border-radius: 8px; padding: 7px; cursor: pointer; flex-shrink: 0;
-    color: var(--text-muted); transition: color 0.2s, background 0.2s;
-  }
-  .menu-btn:hover { color: var(--text-main); background: var(--navy-border); }
-  .menu-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; display: block; }
-
-  .status-badge {
-    display: flex; align-items: center; gap: 7px;
-    background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.3);
-    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--teal);
-    white-space: nowrap;
-  }
-  .status-badge.offline { background: rgba(255,92,138,0.1); border-color: rgba(255,92,138,0.3); color: var(--rose); }
-  .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); animation: pulse-green 1.8s ease-in-out infinite; flex-shrink: 0; }
-  .pulse-dot.offline { background: var(--rose); animation: none; }
-  @keyframes pulse-green {
-    0%,100% { opacity:1; transform:scale(1); box-shadow:0 0 0 0 rgba(0,201,167,0.4); }
-    50% { opacity:0.8; transform:scale(1.1); box-shadow:0 0 0 6px rgba(0,201,167,0); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+    margin: 0 auto;
   }
 
-  .card { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 14px; padding: 20px; }
-  .stat-value { font-family: 'Space Mono', monospace; font-size: 2rem; font-weight: 700; line-height: 1; }
-  .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; }
-  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; }
-  .chip-online { background: rgba(0,201,167,0.12); color: var(--teal); border: 1px solid rgba(0,201,167,0.2); }
-  .chip-sky { background: rgba(79,195,247,0.1); color: var(--sky); border: 1px solid rgba(79,195,247,0.2); }
-  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .data-table th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--navy-border); }
-  .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(30,62,104,0.5); }
-  .data-table tr:last-child td { border: none; }
-  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
-  .alert-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(30,62,104,0.5); }
-  .alert-item:last-child { border: none; padding-bottom: 0; }
-  .alert-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-  .heatmap-cell { border-radius: 3px; height: 22px; cursor: pointer; transition: transform 0.15s; }
-  .heatmap-cell:hover { transform: scale(1.15); }
-  .scroll-panel { max-height: 260px; overflow-y: auto; overflow-x: auto; }
-  .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
-  @keyframes fadeIn { to { opacity: 1; } }
-  .fade-in-1{animation-delay:0.05s} .fade-in-2{animation-delay:0.1s}
-  .fade-in-3{animation-delay:0.15s} .fade-in-4{animation-delay:0.2s}
-  .fade-in-5{animation-delay:0.25s} .fade-in-6{animation-delay:0.3s}
-  .spinner { width:18px; height:18px; border:2px solid rgba(0,201,167,0.2); border-top-color:var(--teal); border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block; flex-shrink: 0; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .error-banner { background:rgba(255,92,138,0.1); border:1px solid rgba(255,92,138,0.3); border-radius:10px; padding:10px 16px; font-size:13px; color:var(--rose); display:none; margin-bottom:16px; align-items:center; gap:8px; }
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
 
-  /* ── RESPONSIVE: KPI grid ── */
-  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .chart-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-  .heatmap-stats-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; }
-  .log-alerts-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+  @media (min-width: 900px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
 
-  /* ── FOOTER ── */
+  /* ── Stats Row ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .stat-card.wide { grid-column: 1 / -1; }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--cyan);
+    line-height: 1;
+  }
+  .stat-value.amber  { color: var(--amber); font-size: 22px; }
+  .stat-value.synced { color: var(--amber); font-size: 18px; }
+
+  /* ── Section Header ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0 4px;
+  }
+  .section-header h2 {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .section-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .badge {
+    background: #00d4c822;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+
+  /* ── Event Log Table ── */
+  .event-table {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .event-row {
+    display: grid;
+    grid-template-columns: 72px 36px 36px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .event-row:last-child { border-bottom: none; }
+  .chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    width: 68px;
+  }
+  .chip.open  { background: var(--open-bg);  color: var(--open-fg);  border: 1px solid #2ecc7155; }
+  .chip.close { background: var(--close-bg); color: var(--close-fg); border: 1px solid #00d4c855; }
+  .count  { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--cyan); text-align: center; }
+  .device { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .ts     { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: right; white-space: nowrap; }
+  .event-head {
+    display: grid;
+    grid-template-columns: 72px 36px 36px 1fr auto;
+    gap: 8px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    background: #0d1b2a88;
+  }
+  .col-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .col-label.center { text-align: center; }
+  .col-label.right  { text-align: right; }
+
+  /* ── Alerts ── */
+  .alert-list { display: flex; flex-direction: column; gap: 8px; }
+  .alert-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .alert-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .alert-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .alert-dot.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .alert-dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+  .alert-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .alert-body  { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .alert-body strong { color: var(--cyan); font-family: var(--mono); }
+
+  /* ── Footer ── */
   .footer {
-    background: var(--navy-mid); border-top: 1px solid var(--navy-border);
-    padding: 16px 28px;
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 12px; color: var(--text-muted);
-    flex-wrap: wrap; gap: 12px;
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 28px; padding-top: 16px;
+    border-top: 1px solid var(--border);
   }
-
-  /* ────────────────────────────────────────────
-     TABLET  ≤ 1024px
-  ──────────────────────────────────────────── */
-  @media (max-width: 1024px) {
-    .sidebar { transform: translateX(-220px); }
-    .menu-btn { display: flex; }
-    .main { margin-left: 0; }
-    .sidebar.open { transform: translateX(0); }
-
-    .chart-grid { grid-template-columns: 1fr 1fr; }
-    .chart-grid > .card:first-child { grid-column: span 2; }
-    .heatmap-stats-grid { grid-template-columns: 1fr 1fr; }
-    .log-alerts-grid { grid-template-columns: 1fr; }
+  .wc-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #00d4c8, #0091a8);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
   }
+  .footer-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .footer-by   { font-size: 11px; color: var(--muted); }
+  .footer-copy { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; margin-top: 12px; }
 
-  /* ────────────────────────────────────────────
-     MOBILE  ≤ 640px
-  ──────────────────────────────────────────── */
-  @media (max-width: 640px) {
-    .topbar { padding: 0 16px; height: 56px; }
-    .p-6 { padding: 14px !important; }
-    .space-y-5 > * + * { margin-top: 14px !important; }
+  /* ══════════════════════════
+     BME680 NEW STYLES
+     (same card/token language)
+  ══════════════════════════ */
 
-    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .chart-grid { grid-template-columns: 1fr; gap: 10px; }
-    .chart-grid > .card:first-child { grid-column: span 1; }
-    .heatmap-stats-grid { grid-template-columns: 1fr; gap: 10px; }
-    .log-alerts-grid { grid-template-columns: 1fr; gap: 10px; }
-
-    .card { padding: 14px; border-radius: 12px; }
-    .stat-value { font-size: 1.5rem; }
-
-    /* Welcome banner */
-    .welcome-banner { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
-    .welcome-actions { width: 100%; display: flex; align-items: center; justify-content: space-between; }
-
-    /* Topbar sync text: hide on small screens */
-    .sync-text { display: none !important; }
-
-    /* Status badge: shorten */
-    .badge-text { display: none; }
-
-    /* Footer: stack */
-    .footer { flex-direction: column; align-items: flex-start; padding: 14px 16px; text-align: left; }
-    .footer-center { display: none; }
-
-    /* Heatmap label overflow fix */
-    #heatmap-grid { overflow-x: auto; }
-    .heatmap-labels { font-size: 9px !important; }
-
-    /* Table horizontal scroll */
-    .scroll-panel { max-height: 220px; }
-
-    /* Donut layout on mobile */
-    .donut-inner { flex-direction: row !important; align-items: center !important; gap: 16px; }
-    .donut-inner canvas { width: 90px !important; height: 90px !important; flex-shrink: 0; }
+  /* Live pill — reuses same .badge token family */
+  .live-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #0f2e1a; border: 1px solid #2ecc7166;
+    color: var(--green); font-family: var(--mono); font-size: 10px;
+    padding: 3px 10px; border-radius: 999px; margin-bottom: 12px;
   }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.4s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  /* ────────────────────────────────────────────
-     VERY SMALL  ≤ 380px
-  ──────────────────────────────────────────── */
-  @media (max-width: 380px) {
-    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .stat-value { font-size: 1.25rem; }
-    .card { padding: 12px; }
+  /* VOC Alert Banner — same border-radius/padding as .alert-card */
+  .voc-banner {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 10px;
+    transition: border-color .3s, background .3s;
+  }
+  .voc-banner.good     { background: #0f2e1a; border-color: #2ecc7166; }
+  .voc-banner.moderate { background: #2a1f08; border-color: #f0a50066; }
+  .voc-banner.danger   { background: #2a0a0a; border-color: #ff475799; animation: dangerPulse 1.6s infinite; }
+  @keyframes dangerPulse { 0%,100%{border-color:#ff475766} 50%{border-color:#ff4757dd} }
+  .voc-banner-icon  { font-size: 24px; flex-shrink: 0; }
+  .voc-banner-body  { flex: 1; }
+  .voc-banner-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .voc-banner-title.good     { color: var(--green); }
+  .voc-banner-title.moderate { color: var(--amber); }
+  .voc-banner-title.danger   { color: var(--red); }
+  .voc-banner-sub    { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .voc-banner-val    { font-family: var(--mono); font-size: 22px; font-weight: 600; flex-shrink: 0; }
+  .voc-banner-val.good     { color: var(--green); }
+  .voc-banner-val.moderate { color: var(--amber); }
+  .voc-banner-val.danger   { color: var(--red); }
+
+  /* Gauge card — same .stat-card base */
+  .gauge-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .gauge-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .gauge-wrap { display: flex; justify-content: center; position: relative; }
+  .gauge-svg  { width: 200px; height: 112px; }
+  .gauge-center {
+    position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%);
+    text-align: center;
+  }
+  .gauge-reading { font-family: var(--mono); font-size: 28px; font-weight: 600; line-height: 1; }
+  .gauge-unit    { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .gauge-legend  { display: flex; justify-content: space-between; margin-top: 10px; }
+  .legend-item   { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
+  .legend-dot    { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* Env 3-col — same card token */
+  .env-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 10px; }
+  .env-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .env-icon  { font-size: 18px; }
+  .env-label { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing:.06em; }
+  .env-val   { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--cyan); }
+
+  /* Chart card — same card token */
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .chart-title  { font-size: 13px; font-weight: 600; color: var(--text); }
+  .chart-badge  {
+    font-family: var(--mono); font-size: 10px; color: var(--cyan);
+    background: #00d4c811; border: 1px solid #00d4c833;
+    padding: 2px 9px; border-radius: 999px;
+  }
+  canvas { width: 100% !important; display: block; }
+
+  /* Heatmap card — same card token */
+  .heatmap-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: 28px repeat(12, 1fr);
+    gap: 3px;
+  }
+  .hm-label {
+    font-family: var(--mono); font-size: 8px; color: var(--muted);
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;
+  }
+  .hm-col-label {
+    font-family: var(--mono); font-size: 7px; color: var(--muted);
+    text-align: center; padding-bottom: 2px;
+  }
+  .hm-cell {
+    height: 20px; border-radius: 3px;
+    transition: transform .15s; cursor: pointer;
+  }
+  .hm-cell:hover { transform: scale(1.2); z-index: 2; }
+  .heatmap-legend { display: flex; align-items: center; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+  .hm-legend-bar  { width: 80px; height: 7px; border-radius: 4px; background: linear-gradient(to right, #1a4a2a, #f0a500, #ff4757); }
+  .hm-legend-label { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+
+  /* Threshold card — same card token */
+  .threshold-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .threshold-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .threshold-title  { font-size: 13px; font-weight: 600; color: var(--text); }
+  .threshold-val    { font-family: var(--mono); font-size: 13px; color: var(--amber); font-weight: 600; }
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; height: 6px;
+    border-radius: 3px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--amber); border: 2px solid var(--bg);
+    box-shadow: 0 0 6px var(--amber);
+  }
+  .threshold-labels {
+    display: flex; justify-content: space-between; margin-top: 5px;
+    font-family: var(--mono); font-size: 9px; color: var(--muted);
+  }
+  .threshold-zones { display: flex; gap: 8px; margin-top: 12px; }
+  .zone-chip {
+    flex: 1; padding: 7px 4px; border-radius: 8px; text-align: center;
+    font-family: var(--mono); font-size: 9px; font-weight: 600; border: 1px solid; line-height: 1.5;
+  }
+  .zone-chip.good     { background:#0f2e1a; border-color:#2ecc7144; color:var(--green); }
+  .zone-chip.moderate { background:#2a1f08; border-color:#f0a50044; color:var(--amber); }
+  .zone-chip.danger   { background:#2a0a0a; border-color:#ff475744; color:var(--red); }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed; background: #0d1b2a; border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 10px;
+    padding: 4px 8px; border-radius: 6px; pointer-events: none;
+    z-index: 999; display: none; white-space: nowrap;
   }
 </style>
 </head>
 <body>
 
-<!-- Mobile overlay -->
-<div class="mobile-overlay" id="mobile-overlay" onclick="closeSidebar()"></div>
-
-<!-- SIDEBAR -->
-<aside class="sidebar" id="sidebar">
-  <div style="padding:24px 20px;border-bottom:1px solid var(--navy-border)">
-    <div class="flex items-center gap-3">
-<div style="
-  width:38px;
-  height:38px;
-  border-radius:10px;
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-">
-  <img src="none.png" style="width:100%;height:100%;object-fit:cover;" />
-</div>
-      <div>
-        <div class="font-bold text-sm tracking-wide">AirLoo</div>
-        <div style="font-size:11px;color:var(--text-muted)">powered by Circuitbay</div>
-      </div>
-    </div>
-  </div>
-  <nav class="flex-1 py-4">
-    <div style="font-size:10px;color:var(--text-dim);padding:6px 20px 4px;text-transform:uppercase;letter-spacing:0.1em">Main</div>
-    <div class="nav-item active">
-      <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      Dashboard
-    </div>
-    <div class="nav-item">
-      <svg class="nav-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Analytics
-    </div>
-    <div class="nav-item">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      Alerts
-    </div>
-    <div style="font-size:10px;color:var(--text-dim);padding:14px 20px 4px;text-transform:uppercase;letter-spacing:0.1em">System</div>
-    <div class="nav-item">
-      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-      Devices
-    </div>
-  </nav>
-  <div style="padding:16px;border-top:1px solid var(--navy-border)">
-    <div class="flex items-center gap-3">
-      <div style="width:32px;height:32px;border-radius:8px;background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">👤</div>
-      <div>
-        <div style="font-size:12.5px;font-weight:600;">Admin</div>
-        <div style="font-size:11px;color:var(--text-muted)" id="sidebar-device">Door_1</div>
-      </div>
-    </div>
-  </div>
-</aside>
-
-<!-- MAIN -->
-<main class="main" id="main-content">
-  <div class="topbar">
-    <div class="topbar-left">
-      <!-- Hamburger -->
-      <button class="menu-btn" id="menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
-        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div style="min-width:0">
-        <div class="font-semibold text-sm">Dashboard</div>
-        <div id="live-time" style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;"></div>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div id="sync-indicator" class="flex items-center gap-2 sync-text" style="font-size:12px;color:var(--text-muted)">
-        <div class="spinner"></div> <span>Connecting...</span>
-      </div>
-      <div id="conn-badge" class="status-badge offline">
-        <div class="pulse-dot offline"></div>
-        <span class="badge-text">Connecting</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="p-6 space-y-5">
-
-    <!-- Error banner -->
-    <div id="error-banner" class="error-banner">
-      <span>⚠️</span><span id="error-msg">Could not reach Firestore.</span>
-    </div>
-
-    <!-- Welcome -->
-    <div class="fade-in fade-in-1 welcome-banner flex items-center justify-between"
-      style="background:linear-gradient(135deg,rgba(0,201,167,0.1),rgba(0,201,167,0.03));border:1px solid rgba(0,201,167,0.2);border-radius:14px;padding:16px 20px">
-      <div>
-        <div class="font-semibold" style="font-size:15px;">Hi, Welcome back! 👋</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-top:2px">
-          Monitoring <strong style="color:var(--teal)" id="device-label"></strong> · ESP32 → Firestore
+  <div class="dashboard-grid">
+    
+    <div>
+      <div class="stats-grid" style="grid-column: 1 / -1;">
+        <div class="stat-card">
+          <div class="stat-label">Total Opens Today</div>
+          <div class="stat-value">48</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Peak Hour (Most Opens)</div>
+          <div class="stat-value amber">13:00 – 14:00</div>
+        </div>
+        <div class="stat-card wide">
+          <div class="stat-label">Last Synced</div>
+          <div class="stat-value synced" id="syncTime">3:43:14 pm</div>
         </div>
       </div>
-      <div class="welcome-actions flex items-center gap-3">
-        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">Auto-refresh: 10s</span>
-        <button onclick="fetchData()" style="background:var(--teal);color:#000;font-weight:700;font-size:13px;padding:9px 16px;border-radius:10px;border:none;cursor:pointer;white-space:nowrap;">↻ Refresh</button>
-      </div>
-    </div>
 
-    <!-- KPI CARDS -->
-    <div class="kpi-grid">
-      <div class="card fade-in fade-in-1">
-        <div class="stat-label mb-2">🚪 Total Opens</div>
-        <div class="stat-value" id="kpi-opens" style="color:var(--teal)">--</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:8px">from latest openCount</div>
+      <div class="section-header">
+        <span>🌬️</span>
+        <h2>BME680 Air Quality · VOC Monitor</h2>
       </div>
-      <div class="card fade-in fade-in-2">
-        <div class="stat-label mb-2">🔒 Total Closes</div>
-        <div class="stat-value" id="kpi-closes" style="color:var(--sky)">--</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:8px">from latest closeCount</div>
-      </div>
-      <div class="card fade-in fade-in-3">
-        <div class="stat-label mb-2">📊 Sessions</div>
-        <div class="stat-value" id="kpi-sessions" style="color:var(--amber)">--</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:8px">min(opens, closes)</div>
-      </div>
-      <div class="card fade-in fade-in-4">
-        <div class="stat-label mb-2">⚡ Last Event</div>
-        <div id="kpi-last-event" class="stat-value" style="font-size:1.3rem">--</div>
-        <div id="kpi-last-time" style="font-size:11px;color:var(--text-muted);margin-top:8px;font-family:'Space Mono',monospace">--</div>
-      </div>
-    </div>
+      <p class="section-sub">Real-time gas resistance / VOC index from toilet_1</p>
 
-    <!-- CHARTS -->
-    <div class="chart-grid">
-      <div class="card fade-in fade-in-2" style="grid-column:span 2">
-        <div class="flex items-center justify-between mb-4" style="gap:12px;flex-wrap:wrap;">
+      <div class="live-pill"><div class="live-dot"></div> LIVE · Updates every 3s</div>
+
+      <div class="voc-banner moderate" id="vocBanner">
+        <div class="voc-banner-icon" id="bannerIcon">⚠️</div>
+        <div class="voc-banner-body">
+          <div class="voc-banner-title moderate" id="bannerTitle">Moderate Air Quality</div>
+          <div class="voc-banner-sub" id="bannerSub">VOC index approaching threshold. Ventilation recommended.</div>
+        </div>
+        <div class="voc-banner-val moderate" id="bannerVal">142</div>
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge-top">
           <div>
-            <div class="font-semibold text-sm">📈 Door Activity — Hourly</div>
-            <div style="font-size:12px;color:var(--text-muted)">OPEN vs CLOSE events by hour</div>
+            <div class="stat-label">Sensor</div>
+            <div style="font-family:var(--mono);font-size:13px;color:var(--cyan);margin-top:2px;">BME680</div>
           </div>
-          <div class="flex gap-3" style="font-size:12px;">
-            <span style="color:var(--teal)">● Opens</span>
-            <span style="color:var(--sky)">● Closes</span>
+          <div style="text-align:center">
+            <div class="stat-label">Threshold</div>
+            <div style="font-family:var(--mono);font-size:13px;color:var(--cyan);margin-top:2px;" id="gaugeThreshLabel">150 IAQ</div>
+          </div>
+          <div style="text-align:right">
+            <div class="stat-label">Status</div>
+            <div style="font-family:var(--mono);font-size:13px;margin-top:2px;color:var(--amber);" id="gaugeStatus">MODERATE</div>
           </div>
         </div>
-        <div style="overflow-x:auto;">
-          <div style="min-width:280px;">
-            <canvas id="hourlyChart" height="110"></canvas>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 200 112">
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#1e3a56" stroke-width="14" stroke-linecap="round"/>
+            <path d="M 20 100 A 80 80 0 0 1 100 20" fill="none" stroke="#2ecc71" stroke-width="14" stroke-linecap="round" opacity=".85"/>
+            <path d="M 100 20 A 80 80 0 0 1 165 55" fill="none" stroke="#f0a500" stroke-width="14" stroke-linecap="round" opacity=".85"/>
+            <path d="M 165 55 A 80 80 0 0 1 180 100" fill="none" stroke="#ff4757" stroke-width="14" stroke-linecap="round" opacity=".85"/>
+            <line id="gaugeNeedle" x1="100" y1="100" x2="38" y2="48" stroke="#f0a500" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="100" cy="100" r="5" fill="#152840" stroke="#f0a500" stroke-width="2"/>
+            <text x="14" y="113" fill="#6b8fa8" font-size="8" font-family="monospace">0</text>
+            <text x="86" y="11" fill="#6b8fa8" font-size="8" font-family="monospace">150</text>
+            <text x="174" y="113" fill="#6b8fa8" font-size="8" font-family="monospace">300</text>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-reading" id="gaugeReading" style="color:var(--amber)">142</div>
+            <div class="gauge-unit">IAQ Index</div>
           </div>
+        </div>
+        <div class="gauge-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#2ecc71"></div>Good (0–100)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f0a500"></div>Moderate</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ff4757"></div>Danger</div>
         </div>
       </div>
 
-      <div class="card fade-in fade-in-3">
-        <div class="font-semibold text-sm mb-1">🔄 Event Split</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Opens vs Closes proportion</div>
-        <div class="donut-inner flex flex-col items-center">
-          <canvas id="donutChart" width="120" height="120"></canvas>
-          <div class="space-y-3 mt-4 w-full">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2"><div style="width:10px;height:10px;border-radius:2px;background:var(--teal)"></div><span style="font-size:13px">Opens</span></div>
-              <span class="mono font-bold" id="donut-opens">--</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2"><div style="width:10px;height:10px;border-radius:2px;background:var(--sky)"></div><span style="font-size:13px">Closes</span></div>
-              <span class="mono font-bold" id="donut-closes">--</span>
-            </div>
-            <div style="border-top:1px solid var(--navy-border);padding-top:10px">
-              <div style="font-size:12px;color:var(--text-muted)">Device</div>
-              <div class="mono font-bold" id="donut-device" style="color:var(--teal);font-size:13px">--</div>
-            </div>
-          </div>
+      <div class="env-grid">
+        <div class="env-card">
+          <div class="env-icon">🌡️</div>
+          <div class="env-label">Temp</div>
+          <div class="env-val" id="envTemp">28.4°</div>
+        </div>
+        <div class="env-card">
+          <div class="env-icon">💧</div>
+          <div class="env-label">Humidity</div>
+          <div class="env-val" id="envHum">67%</div>
+        </div>
+        <div class="env-card">
+          <div class="env-icon">📊</div>
+          <div class="env-label">Pressure</div>
+          <div class="env-val" id="envPres">1012</div>
         </div>
       </div>
-    </div>
 
-    <!-- HEATMAP + STATS -->
-    <div class="heatmap-stats-grid">
-      <div class="card fade-in fade-in-4">
-
-        <!-- ── CHANGED: GitHub-style heatmap ── -->
-        <div class="flex items-center justify-between mb-1" style="flex-wrap:wrap;gap:8px;">
-          <div class="font-semibold text-sm">🔥 Activity Heatmap</div>
-          <span id="heatmap-range" style="font-size:11px;color:var(--text-dim);font-family:'Space Mono',monospace;"></span>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">📈 VOC Index — Last 30 minutes</div>
+          <div class="chart-badge">Live</div>
         </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">OPEN events · GitHub-style · last 16 weeks</div>
-        <div id="heatmap-grid" style="overflow-x:auto;"></div>
-        <div class="flex items-center justify-between mt-3">
-          <div class="flex items-center gap-2" style="font-size:11px;">
-            <span style="color:var(--text-muted)">Less</span>
-            <div style="display:flex;gap:3px;">
-              <div style="width:11px;height:11px;border-radius:2px;background:rgba(0,201,167,0.07);border:1px solid rgba(0,201,167,0.15);"></div>
-              <div style="width:11px;height:11px;border-radius:2px;background:rgba(0,201,167,0.22);"></div>
-              <div style="width:11px;height:11px;border-radius:2px;background:rgba(0,201,167,0.45);"></div>
-              <div style="width:11px;height:11px;border-radius:2px;background:rgba(0,201,167,0.70);"></div>
-              <div style="width:11px;height:11px;border-radius:2px;background:#00C9A7;"></div>
-            </div>
-            <span style="color:var(--text-muted)">More</span>
-          </div>
-          <span id="heatmap-total" style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;"></span>
-        </div>
-        <!-- ── END CHANGED ── -->
-
-      </div>
-
-      <div class="card fade-in fade-in-4">
-        <div class="font-semibold text-sm mb-4">📊 Quick Stats</div>
-        <div class="space-y-4">
-          <div style="background:rgba(0,201,167,0.06);border:1px solid rgba(0,201,167,0.15);border-radius:10px;padding:14px">
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Total Docs in Firestore</div>
-            <div class="mono font-bold" style="font-size:1.6rem;color:var(--teal)" id="stat-total">--</div>
-          </div>
-          <div style="background:rgba(79,195,247,0.06);border:1px solid rgba(79,195,247,0.15);border-radius:10px;padding:14px">
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Busiest Day (Most Opens)</div>
-            <div class="mono font-bold" style="font-size:1.4rem;color:var(--sky)" id="stat-peak">--</div>
-          </div>
-          <div style="background:rgba(255,181,71,0.06);border:1px solid rgba(255,181,71,0.15);border-radius:10px;padding:14px">
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Last Synced</div>
-            <div class="mono font-bold" style="font-size:1rem;color:var(--amber)" id="stat-sync">--</div>
-          </div>
-        </div>
+        <canvas id="vocChart" height="130"></canvas>
       </div>
     </div>
 
-    <!-- EVENT LOG + ALERTS -->
-    <div class="log-alerts-grid">
-      <div class="card fade-in fade-in-5">
-        <div class="flex items-center justify-between mb-3" style="flex-wrap:wrap;gap:8px;">
+    <div>
+      <div class="heatmap-card">
+        <div class="section-header" style="margin:0 0 10px 0;">
+          <span>🗓️</span>
+          <h2>VOC Heatmap — Hourly Average</h2>
+        </div>
+        <p class="section-sub" style="margin-bottom:10px;">This week · toilet_1</p>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+        <div class="heatmap-legend">
+          <span class="hm-legend-label">Low</span>
+          <div class="hm-legend-bar"></div>
+          <span class="hm-legend-label">High</span>
+        </div>
+      </div>
+
+      <div class="threshold-card">
+        <div class="threshold-header">
+          <div class="threshold-title">⚙️ Alert Threshold</div>
+          <div class="threshold-val" id="threshDisplay">150 IAQ</div>
+        </div>
+        <input type="range" id="threshSlider" min="50" max="300" value="150" step="5">
+        <div class="threshold-labels"><span>50</span><span>150</span><span>300</span></div>
+        <div class="threshold-zones">
+          <div class="zone-chip good">✅ GOOD<br>&lt;100</div>
+          <div class="zone-chip moderate" id="zoneModerate">⚠️ MODERATE<br>100–150</div>
+          <div class="zone-chip danger" id="zoneDanger">🚨 DANGER<br>&gt;150</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <span>📋</span>
+        <h2>Firestore Event Log</h2>
+      </div>
+      <p class="section-sub">All 5 fields: event · openCount · closeCount · device · timestamp</p>
+      <span class="badge">48 records</span>
+
+      <div class="event-table">
+        <div class="event-head">
+          <span class="col-label">Event</span>
+          <span class="col-label center">Open</span>
+          <span class="col-label center">Close</span>
+          <span class="col-label">Device</span>
+          <span class="col-label right">Timestamp</span>
+        </div>
+        <div class="event-row">
+          <span class="chip close"><span>🔒</span> CLOSE</span>
+          <span class="count">1</span>
+          <span class="count">2</span>
+          <span class="device">toilet_1</span>
+          <span class="ts">11 Apr,<br>01:52:55 pm</span>
+        </div>
+        <div class="event-row">
+          <span class="chip open"><span>🟧</span> OPEN</span>
+          <span class="count">1</span>
+          <span class="count">1</span>
+          <span class="device">toilet_1</span>
+          <span class="ts">11 Apr,<br>01:52:35 pm</span>
+        </div>
+        <div class="event-row">
+          <span class="chip close"><span>🔒</span> CLOSE</span>
+          <span class="count">0</span>
+          <span class="count">1</span>
+          <span class="device">toilet_1</span>
+          <span class="ts">11 Apr,<br>01:52:09 pm</span>
+        </div>
+      </div>
+
+      <div class="section-header" style="margin-top:20px;">
+        <span>🔔</span>
+        <h2>Smart Alerts</h2>
+      </div>
+      <p class="section-sub" style="margin-bottom:10px;">Generated from live Firestore + BME680 data</p>
+
+      <div class="alert-list">
+        <div class="alert-card">
+          <div class="alert-dot green"></div>
           <div>
-            <div class="font-semibold text-sm">📋 Firestore Event Log</div>
-            <div style="font-size:12px;color:var(--text-muted)">All 5 fields: event · openCount · closeCount · device · timestamp</div>
+            <div class="alert-title">✅ Firestore Connected</div>
+            <div class="alert-body">Fetched <strong>48</strong> documents from <strong>toilet_1</strong>.</div>
           </div>
-          <span id="log-count" class="chip chip-online">0 records</span>
         </div>
-        <div class="scroll-panel">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Event</th>
-                <th>Opens</th>
-                <th>Closes</th>
-                <th>Device</th>
-                <th>Timestamp</th>
-              </tr>
-            </thead>
-            <tbody id="event-tbody">
-              <tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:24px">
-                <div class="spinner" style="margin:0 auto 8px"></div>Fetching from Firestore...
-              </td></tr>
-            </tbody>
-          </table>
+        <div class="alert-card" id="vocAlertCard" style="border-color:#f0a50055;">
+          <div class="alert-dot amber" id="vocAlertDot"></div>
+          <div>
+            <div class="alert-title" id="vocAlertTitle">⚠️ VOC Moderate — 142 IAQ</div>
+            <div class="alert-body" id="vocAlertBody">Gas level near threshold. Consider ventilating <strong>toilet_1</strong>.</div>
+          </div>
         </div>
-      </div>
-
-      <div class="card fade-in fade-in-6">
-        <div class="font-semibold text-sm mb-1">🔔 Smart Alerts</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Generated from live Firestore data</div>
-        <div id="alerts-feed">
-          <div class="alert-item">
-            <div class="alert-dot" style="background:var(--text-dim)"></div>
-            <div style="font-size:13px;color:var(--text-muted)">Awaiting data...</div>
+        <div class="alert-card">
+          <div class="alert-dot green"></div>
+          <div>
+            <div class="alert-title">🌡️ Temp &amp; Humidity Normal</div>
+            <div class="alert-body">BME680 reads <strong>28.4°C</strong> / <strong>67% RH</strong> — within range.</div>
           </div>
         </div>
       </div>
-    </div>
 
-  </div><!-- end .p-6 -->
-
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="flex items-center gap-3">
-      <div style="
-  width:32px;
-  height:32px;
-  border-radius:8px;
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-">
-  <img src="none.png" style="width:100%;height:100%;object-fit:cover;" />
-</div>
-      <div>
-        <div style="font-weight:600;color:var(--text-main)">AirLoo</div>
-        <div style="font-size:11px;">by Circuitbay</div>
+      <div class="footer">
+        <div class="wc-icon">🚻</div>
+        <div>
+          <div class="footer-name">AirLoo</div>
+          <div class="footer-by">by Circuitbay</div>
+        </div>
       </div>
+      <div class="footer-copy">© 2026 AirLoo · Built by Nikhil Das</div>
     </div>
-    <div class="footer-center" style="text-align:center;font-size:11.5px;">
-      Smart Sanitation • Real-time Monitoring • IoT Powered
-    </div>
-    <div style="font-size:11px;">
-      © 2026 AirLoo • Built by Circuitbay
-    </div>
-  </footer>
-</main>
+
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
 
 <script>
-// ─────────────────────────────────────────────
-//  SIDEBAR TOGGLE (mobile)
-// ─────────────────────────────────────────────
-function toggleSidebar() {
-  const sb = document.getElementById('sidebar');
-  const overlay = document.getElementById('mobile-overlay');
-  sb.classList.toggle('open');
-  overlay.classList.toggle('active');
+/* ══ State ══ */
+let vocHistory = [88,95,102,118,125,130,122,140,145,142,138,145,155,160,148,142,
+                  136,128,120,115,108,118,130,142,150,158,162,148,142,142];
+let threshold  = 150;
+let currentVOC = 142;
+
+/* ══ Gauge ══ */
+function updateGauge(val) {
+  const pct = Math.min(Math.max(val / 300, 0), 1);
+  const rad = (-180 + pct * 180) * Math.PI / 180;
+  const x2 = 100 + 72 * Math.cos(rad);
+  const y2 = 100 + 72 * Math.sin(rad);
+  document.getElementById('gaugeNeedle').setAttribute('x2', x2.toFixed(1));
+  document.getElementById('gaugeNeedle').setAttribute('y2', y2.toFixed(1));
+  document.getElementById('gaugeReading').textContent = Math.round(val);
+  const col = val < 100 ? '#2ecc71' : val < threshold ? '#f0a500' : '#ff4757';
+  document.getElementById('gaugeReading').style.color = col;
+  document.getElementById('gaugeNeedle').setAttribute('stroke', col);
 }
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('mobile-overlay').classList.remove('active');
+
+/* ══ Alerts ══ */
+function updateAlerts(val) {
+  const banner  = document.getElementById('vocBanner');
+  const icon    = document.getElementById('bannerIcon');
+  const title   = document.getElementById('bannerTitle');
+  const sub     = document.getElementById('bannerSub');
+  const bval    = document.getElementById('bannerVal');
+  const gStatus = document.getElementById('gaugeStatus');
+  const aCard   = document.getElementById('vocAlertCard');
+  const aDot    = document.getElementById('vocAlertDot');
+  const aTitle  = document.getElementById('vocAlertTitle');
+  const aBody   = document.getElementById('vocAlertBody');
+
+  bval.textContent = Math.round(val);
+
+  if (val < 100) {
+    banner.className = 'voc-banner good';
+    icon.textContent = '✅';
+    title.textContent = 'Good Air Quality';
+    title.className = 'voc-banner-title good';
+    bval.className  = 'voc-banner-val good';
+    sub.textContent = 'VOC levels within safe range. Air is clean.';
+    gStatus.textContent = 'GOOD'; gStatus.style.color = '#2ecc71';
+    aCard.style.borderColor = '#2ecc7155'; aDot.className = 'alert-dot green';
+    aTitle.textContent = '✅ VOC Good — ' + Math.round(val) + ' IAQ';
+    aBody.innerHTML = 'Air quality is <strong>good</strong> at <strong>toilet_1</strong>.';
+  } else if (val < threshold) {
+    banner.className = 'voc-banner moderate';
+    icon.textContent = '⚠️';
+    title.textContent = 'Moderate Air Quality';
+    title.className = 'voc-banner-title moderate';
+    bval.className  = 'voc-banner-val moderate';
+    sub.textContent = 'VOC index approaching threshold. Ventilation recommended.';
+    gStatus.textContent = 'MODERATE'; gStatus.style.color = '#f0a500';
+    aCard.style.borderColor = '#f0a50055'; aDot.className = 'alert-dot amber';
+    aTitle.textContent = '⚠️ VOC Moderate — ' + Math.round(val) + ' IAQ';
+    aBody.innerHTML = 'Gas near threshold. Consider ventilating <strong>toilet_1</strong>.';
+  } else {
+    banner.className = 'voc-banner danger';
+    icon.textContent = '🚨';
+    title.textContent = 'DANGER — Threshold Exceeded!';
+    title.className = 'voc-banner-title danger';
+    bval.className  = 'voc-banner-val danger';
+    sub.textContent = 'Critical VOC level detected! Immediate ventilation required.';
+    gStatus.textContent = 'DANGER'; gStatus.style.color = '#ff4757';
+    aCard.style.borderColor = '#ff475788'; aDot.className = 'alert-dot red';
+    aTitle.textContent = '🚨 VOC DANGER — ' + Math.round(val) + ' IAQ';
+    aBody.innerHTML = '<strong>CRITICAL:</strong> Exceeded at <strong>toilet_1</strong>. Ventilate now!';
+  }
 }
-// Close sidebar on nav item click (mobile)
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    if (window.innerWidth <= 1024) closeSidebar();
+
+/* ══ Line Chart ══ */
+function drawChart() {
+  const canvas = document.getElementById('vocChart');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth || 360, H = 130;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = {t:8, r:10, b:22, l:30};
+  const iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
+  const data = vocHistory;
+  const maxV = 300;
+
+  [0, 100, threshold, 200, 300].forEach(v => {
+    const y = pad.t + iH - (v / maxV) * iH;
+    ctx.beginPath();
+    ctx.strokeStyle = v === threshold ? '#f0a50044' : '#1e3a5644';
+    ctx.lineWidth = v === threshold ? 1.5 : 1;
+    ctx.setLineDash(v === threshold ? [4,3] : [2,4]);
+    ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + iW, y);
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = v === threshold ? '#f0a500aa' : '#6b8fa8';
+    ctx.font = '8px IBM Plex Mono,monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(v === threshold ? '⚑' + v : v, pad.l - 3, y + 3);
   });
-});
 
-// ─────────────────────────────────────────────
-//  YOUR FIREBASE CONFIG
-// ─────────────────────────────────────────────
-const PROJECT_ID = "esp32-demo-project-47c9e";
-const API_KEY    = "AIzaSyC82xou5F2ljcPZtpDcpbNQ8BI0Yn1_fWg";
-const COLLECTION = "events";
-const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+  const ty = pad.t + iH - (threshold / maxV) * iH;
+  ctx.fillStyle = 'rgba(255,71,87,0.06)';
+  ctx.fillRect(pad.l, pad.t, iW, ty - pad.t);
 
-// ─────────────────────────────────────────────
-//  CHARTS  (initialized empty)
-// ─────────────────────────────────────────────
-const hourlyChart = new Chart(
-  document.getElementById('hourlyChart').getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: Array.from({length:24}, (_,i) => `${i}:00`),
-      datasets: [
-        { label:'Opens',  data: new Array(24).fill(0), borderColor:'#00C9A7', backgroundColor:'rgba(0,201,167,0.08)', tension:0.4, fill:true, pointRadius:3, borderWidth:2 },
-        { label:'Closes', data: new Array(24).fill(0), borderColor:'#4FC3F7', backgroundColor:'rgba(79,195,247,0.06)',  tension:0.4, fill:true, pointRadius:3, borderWidth:2 }
-      ]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:true,
-      plugins: { legend:{display:false}, tooltip:{ backgroundColor:'#162F52', titleColor:'#E8F4FD', bodyColor:'#7A9EC5', borderColor:'#1E3E68', borderWidth:1 } },
-      scales: {
-        x: { ticks:{color:'#4A6A8A',font:{size:10},maxTicksLimit:8}, grid:{color:'rgba(30,62,104,0.4)'} },
-        y: { ticks:{color:'#4A6A8A',font:{size:10}}, grid:{color:'rgba(30,62,104,0.4)'}, beginAtZero:true }
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + iH);
+  grad.addColorStop(0, 'rgba(0,212,200,0.22)');
+  grad.addColorStop(1, 'rgba(0,212,200,0)');
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = pad.l + (i / (data.length - 1)) * iW;
+    const y = pad.t + iH - (v / maxV) * iH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad.l + iW, pad.t + iH);
+  ctx.lineTo(pad.l, pad.t + iH);
+  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = '#00d4c8'; ctx.setLineDash([]);
+  data.forEach((v, i) => {
+    const x = pad.l + (i / (data.length - 1)) * iW;
+    const y = pad.t + iH - (v / maxV) * iH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }); ctx.stroke();
+
+  const lx = pad.l + iW;
+  const ly = pad.t + iH - (data[data.length-1] / maxV) * iH;
+  const dc = data[data.length-1] < 100 ? '#2ecc71' : data[data.length-1] < threshold ? '#f0a500' : '#ff4757';
+  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI*2);
+  ctx.fillStyle = dc; ctx.fill();
+  ctx.strokeStyle = '#0d1b2a'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  ctx.fillStyle = '#6b8fa8'; ctx.font = '8px IBM Plex Mono,monospace'; ctx.textAlign = 'center';
+  ['-30m','-20m','-10m','now'].forEach((l, i) => {
+    ctx.fillText(l, pad.l + (i/3)*iW, H - 5);
+  });
+}
+
+/* ══ Heatmap ══ */
+function buildHeatmap() {
+  const grid = document.getElementById('heatmapGrid');
+  grid.innerHTML = '';
+  const days  = ['Mon','Tue','Wed','Thu','Fri'];
+  const hours = ['0h','2h','4h','6h','8h','10h','12h','14h','16h','18h','20h','22h'];
+  const rawData = [
+    [20,18,15,30,45,90,130,162,148,120,95,60],
+    [18,15,12,25,40,85,120,158,142,115,88,55],
+    [22,20,18,35,55,95,140,170,155,130,100,70],
+    [25,22,20,40,60,100,145,175,160,138,108,75],
+    [28,24,20,45,68,110,152,180,162,142,112,80],
+  ];
+  const tooltip = document.getElementById('tooltip');
+
+  grid.appendChild(document.createElement('div'));
+  hours.forEach(h => {
+    const el = document.createElement('div');
+    el.className = 'hm-col-label'; el.textContent = h;
+    grid.appendChild(el);
+  });
+
+  days.forEach((day, di) => {
+    const rl = document.createElement('div');
+    rl.className = 'hm-label'; rl.textContent = day;
+    grid.appendChild(rl);
+    rawData[di].forEach((val, hi) => {
+      const cell = document.createElement('div');
+      cell.className = 'hm-cell';
+      const pct = Math.min(val / 200, 1);
+      let r, g, b;
+      if (pct < .5) {
+        r = Math.round(pct*2*240); g = Math.round(160 + pct*2*40); b = 40;
+      } else {
+        r = Math.round(240 + (pct-.5)*2*15); g = Math.round(200 - (pct-.5)*2*160); b = 40;
       }
-    }
+      cell.style.background = `rgb(${r},${g},${b})`;
+      cell.style.opacity = 0.25 + pct * 0.75;
+      cell.addEventListener('mousemove', e => {
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 10) + 'px';
+        tooltip.style.top  = (e.clientY - 28) + 'px';
+        tooltip.textContent = `${day} ${hours[hi]}: ${val} IAQ`;
+      });
+      cell.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+      grid.appendChild(cell);
+    });
+  });
+}
+
+/* ══ Threshold Slider ══ */
+const slider = document.getElementById('threshSlider');
+slider.addEventListener('input', () => {
+  threshold = parseInt(slider.value);
+  document.getElementById('threshDisplay').textContent = threshold + ' IAQ';
+  document.getElementById('gaugeThreshLabel').textContent = threshold + ' IAQ';
+  document.getElementById('zoneModerate').innerHTML = `⚠️ MODERATE<br>100–${threshold}`;
+  document.getElementById('zoneDanger').innerHTML   = `🚨 DANGER<br>&gt;${threshold}`;
+  const pct = ((threshold - 50) / 250) * 100;
+  slider.style.background = `linear-gradient(to right, var(--cyan) 0%, var(--cyan) ${pct}%, var(--border) ${pct}%)`;
+  updateAlerts(currentVOC);
+  drawChart();
 });
+slider.style.background = `linear-gradient(to right, var(--cyan) 0%, var(--cyan) 40%, var(--border) 40%)`;
 
-const donutChart = new Chart(
-  document.getElementById('donutChart').getContext('2d'), {
-    type: 'doughnut',
-    data: { datasets:[{ data:[1,1], backgroundColor:['#00C9A7','#4FC3F7'], borderWidth:0, hoverOffset:4 }] },
-    options: { cutout:'70%', plugins:{legend:{display:false}, tooltip:{enabled:false}} }
-});
-
-// ─────────────────────────────────────────────
-//  PARSE FIRESTORE TIMESTAMP FIELD
-// ─────────────────────────────────────────────
-function parseTS(tsValue) {
-  if (!tsValue) return null;
-  if (typeof tsValue === 'string') return new Date(tsValue);
-  if (tsValue.seconds) return new Date(tsValue.seconds * 1000);
-  return null;
+/* ══ Live tick every 3s ══ */
+function tick() {
+  const delta = (Math.random() - 0.44) * 14;
+  currentVOC = Math.max(30, Math.min(285, currentVOC + delta));
+  vocHistory.push(Math.round(currentVOC));
+  if (vocHistory.length > 30) vocHistory.shift();
+  updateGauge(currentVOC);
+  updateAlerts(currentVOC);
+  drawChart();
+  document.getElementById('envTemp').textContent = (28.4 + (Math.random()-.5)*.5).toFixed(1) + '°';
+  document.getElementById('envHum').textContent  = Math.round(67 + (Math.random()-.5)*3) + '%';
+  document.getElementById('envPres').textContent = Math.round(1012 + (Math.random()-.5)*2);
+  const now = new Date();
+  document.getElementById('syncTime').textContent =
+    now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }
 
-// ─────────────────────────────────────────────
-//  FETCH ALL DOCUMENTS (paginated up to 300)
-// ─────────────────────────────────────────────
-async function fetchAllDocs() {
-  let docs = [], pageToken = null;
-  do {
-    let url = `${FS_BASE}/${COLLECTION}?key=${API_KEY}&pageSize=100`;
-    if (pageToken) url += `&pageToken=${pageToken}`;
-    const res = await fetch(url);
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
-    const json = await res.json();
-    if (json.documents) docs = docs.concat(json.documents);
-    pageToken = json.nextPageToken || null;
-  } while (pageToken && docs.length < 300);
-  return docs;
-}
-
-// ─────────────────────────────────────────────
-//  MAIN FETCH + RENDER
-// ─────────────────────────────────────────────
-async function fetchData() {
-  document.getElementById('sync-indicator').innerHTML = '<div class="spinner"></div>&nbsp;<span>Syncing...</span>';
-
-  try {
-    const rawDocs = await fetchAllDocs();
-
-    const docs = rawDocs.map(d => {
-      const f = d.fields || {};
-      return {
-        event:      f.event?.stringValue      || '?',
-        openCount:  parseInt(f.openCount?.integerValue  ?? 0),
-        closeCount: parseInt(f.closeCount?.integerValue ?? 0),
-        device:     f.device?.stringValue     || 'unknown',
-        timestamp:  parseTS(f.timestamp?.timestampValue)
-      };
-    }).filter(d => d.timestamp);
-
-    docs.sort((a,b) => b.timestamp - a.timestamp);
-
-    setOnline(true);
-    hideError();
-    render(docs);
-
-  } catch(err) {
-    setOnline(false);
-    showError(err.message);
-    console.error(err);
-  }
-
-  const t = new Date().toLocaleTimeString('en-IN');
-  document.getElementById('sync-indicator').innerHTML = `<span style="font-size:11.5px;color:var(--text-muted)">Last sync: ${t}</span>`;
-  document.getElementById('stat-sync').textContent = t;
-}
-
-// ─────────────────────────────────────────────
-//  RENDER
-// ─────────────────────────────────────────────
-function render(docs) {
-  if (!docs.length) {
-    document.getElementById('event-tbody').innerHTML =
-      `<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:24px">No documents found in the "${COLLECTION}" collection.</td></tr>`;
-    return;
-  }
-
-  const latest = docs[0];
-
-  document.getElementById('kpi-opens').textContent    = latest.openCount;
-  document.getElementById('kpi-closes').textContent   = latest.closeCount;
-  document.getElementById('kpi-sessions').textContent = Math.min(latest.openCount, latest.closeCount);
-  document.getElementById('kpi-last-event').textContent = latest.event;
-  document.getElementById('kpi-last-event').style.color = latest.event === 'OPEN' ? 'var(--teal)' : 'var(--sky)';
-  document.getElementById('kpi-last-time').textContent  = latest.timestamp.toLocaleString('en-IN');
-  document.getElementById('device-label').textContent   = latest.device;
-  document.getElementById('sidebar-device').textContent = latest.device;
-  document.getElementById('donut-device').textContent   = latest.device;
-  document.getElementById('donut-opens').textContent    = latest.openCount;
-  document.getElementById('donut-closes').textContent   = latest.closeCount;
-  document.getElementById('stat-total').textContent     = docs.length;
-  document.getElementById('log-count').textContent      = `${docs.length} records`;
-
-  donutChart.data.datasets[0].data = [latest.openCount || 1, latest.closeCount || 1];
-  donutChart.update('none');
-
-  const hOpens  = new Array(24).fill(0);
-  const hCloses = new Array(24).fill(0);
-  docs.forEach(d => {
-    const h = d.timestamp.getHours();
-    if (d.event === 'OPEN')  hOpens[h]++;
-    else if (d.event === 'CLOSE') hCloses[h]++;
-  });
-  hourlyChart.data.datasets[0].data = hOpens;
-  hourlyChart.data.datasets[1].data = hCloses;
-  hourlyChart.update('none');
-
-  // ── CHANGED: GitHub-style contribution heatmap (16 weeks × 7 days) ──
-  const WEEKS = 16;
-  const MONTH_NAMES    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const DAY_NAMES_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-  // Map "YYYY-MM-DD" → number of OPEN events that day
-  const dayMap = {};
-  docs.forEach(d => {
-    if (d.event !== 'OPEN') return;
-    const key = d.timestamp.toISOString().slice(0, 10);
-    dayMap[key] = (dayMap[key] || 0) + 1;
-  });
-  const maxVal = Math.max(...Object.values(dayMap), 1);
-
-  // Rewind to the Sunday that starts our 16-week window
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - startDate.getDay() - (WEEKS - 1) * 7);
-  startDate.setHours(0, 0, 0, 0);
-
-  // 5-tier teal colour scale (like GitHub's green scale)
-  function cellColor(v) {
-    if (!v)       return 'rgba(0,201,167,0.07)';
-    const r = v / maxVal;
-    if (r < 0.20) return 'rgba(0,201,167,0.22)';
-    if (r < 0.40) return 'rgba(0,201,167,0.45)';
-    if (r < 0.65) return 'rgba(0,201,167,0.65)';
-    if (r < 0.85) return 'rgba(0,201,167,0.85)';
-    return '#00C9A7';
-  }
-
-  // ── Month label row ──
-  let monthHTML = '<div style="display:flex;margin-left:28px;margin-bottom:4px;">';
-  let lastMonth = -1;
-  for (let w = 0; w < WEEKS; w++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + w * 7);
-    const m = d.getMonth();
-    if (m !== lastMonth) {
-      monthHTML += `<div style="flex:1;font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;">${MONTH_NAMES[m]}</div>`;
-      lastMonth = m;
-    } else {
-      monthHTML += `<div style="flex:1;"></div>`;
-    }
-  }
-  monthHTML += '</div>';
-
-  // ── Day labels + cell grid ──
-  let gridHTML = '<div style="display:flex;gap:0;">';
-
-  // Day-of-week labels (Mon / Wed / Fri only, like GitHub)
-  gridHTML += '<div style="display:flex;flex-direction:column;gap:3px;margin-right:5px;padding-top:0;">';
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((lbl, i) => {
-    const show = (i === 1 || i === 3 || i === 5);
-    gridHTML += `<div style="height:13px;line-height:13px;font-size:9px;
-      color:${show ? 'var(--text-dim)' : 'transparent'};
-      font-family:'Space Mono',monospace;">${lbl}</div>`;
-  });
-  gridHTML += '</div>';
-
-  // Week columns (left = oldest, right = newest)
-  let windowTotal = 0;
-  for (let w = 0; w < WEEKS; w++) {
-    gridHTML += '<div style="display:flex;flex-direction:column;gap:3px;margin-right:3px;">';
-    for (let dow = 0; dow < 7; dow++) {
-      const cellDate = new Date(startDate);
-      cellDate.setDate(cellDate.getDate() + w * 7 + dow);
-      const isFuture = cellDate > today;
-      const key = cellDate.toISOString().slice(0, 10);
-      const v   = dayMap[key] || 0;
-      windowTotal += v;
-      const label  = cellDate.toLocaleDateString('en-IN', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
-      const title  = isFuture ? `${label} — future` : `${label} — ${v} open${v !== 1 ? 's' : ''}`;
-      const bg     = isFuture ? 'rgba(0,0,0,0)' : cellColor(v);
-      const border = (!v && !isFuture) ? '1px solid rgba(0,201,167,0.13)' : 'none';
-      gridHTML += `<div title="${title}"
-        style="width:13px;height:13px;border-radius:2px;background:${bg};border:${border};
-               flex-shrink:0;cursor:${isFuture ? 'default' : 'pointer'};transition:transform 0.12s;"
-        onmouseover="if(!${isFuture})this.style.transform='scale(1.5)'"
-        onmouseout="this.style.transform='scale(1)'"></div>`;
-    }
-    gridHTML += '</div>';
-  }
-  gridHTML += '</div>';
-
-  document.getElementById('heatmap-grid').innerHTML = monthHTML + gridHTML;
-
-  const fmt = d => d.toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
-  document.getElementById('heatmap-range').textContent = `${fmt(startDate)} – ${fmt(today)}`;
-  document.getElementById('heatmap-total').textContent = `${windowTotal} opens in range`;
-
-  // Busiest day of week (all-time, for Quick Stats)
-  const wOpens = new Array(7).fill(0);
-  docs.forEach(d => { if (d.event === 'OPEN') wOpens[d.timestamp.getDay()]++; });
-  const peakDay = wOpens.indexOf(Math.max(...wOpens));
-  document.getElementById('stat-peak').textContent = DAY_NAMES_FULL[peakDay];
-  // ── END CHANGED ──
-
-  document.getElementById('event-tbody').innerHTML = docs.slice(0,50).map(d => {
-    const badge = d.event === 'OPEN'
-      ? `<span class="chip chip-online">🚪 OPEN</span>`
-      : `<span class="chip chip-sky">🔒 CLOSE</span>`;
-    return `<tr>
-      <td>${badge}</td>
-      <td class="mono" style="color:var(--teal)">${d.openCount}</td>
-      <td class="mono" style="color:var(--sky)">${d.closeCount}</td>
-      <td style="font-size:12px;color:var(--text-muted)">${d.device}</td>
-      <td class="mono" style="font-size:11px;color:var(--text-muted)">
-        ${d.timestamp.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
-      </td>
-    </tr>`;
-  }).join('');
-
-  const opens = latest.openCount, closes = latest.closeCount;
-  const sessions = Math.min(opens, closes);
-  const alerts = [];
-
-  alerts.push({ c:'var(--teal)', title:'✅ Firestore Connected',
-    msg:`Fetched ${docs.length} documents from <strong>${latest.device}</strong>.` });
-
-  if (opens > closes + 1)
-    alerts.push({ c:'var(--amber)', title:'⚠️ Door May Be Open',
-      msg:`openCount (${opens}) exceeds closeCount (${closes}) — a close event may be missing.` });
-
-  if (sessions >= 20 && sessions < 50)
-    alerts.push({ c:'var(--amber)', title:'🧹 Cleaning Recommended',
-      msg:`${sessions} sessions completed. Schedule maintenance soon.` });
-
-  if (sessions >= 50)
-    alerts.push({ c:'var(--rose)', title:'🚨 High Usage Alert',
-      msg:`${sessions} sessions — facility under heavy load.` });
-
-  const ageMin = Math.round((Date.now() - latest.timestamp) / 60000);
-  if (ageMin > 60)
-    alerts.push({ c:'var(--sky)', title:'🔇 No Recent Activity',
-      msg:`Last event was ${ageMin} minutes ago. Device may be idle or offline.` });
-
-  document.getElementById('alerts-feed').innerHTML = alerts.map(a =>
-    `<div class="alert-item">
-      <div class="alert-dot" style="background:${a.c}"></div>
-      <div>
-        <div style="font-size:13px;font-weight:600;">${a.title}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${a.msg}</div>
-      </div>
-    </div>`).join('');
-}
-
-// ─────────────────────────────────────────────
-//  HELPERS
-// ─────────────────────────────────────────────
-function setOnline(ok) {
-  const badge = document.getElementById('conn-badge');
-  badge.className = ok ? 'status-badge' : 'status-badge offline';
-  badge.innerHTML = ok
-    ? `<div class="pulse-dot"></div><span class="badge-text">Live</span>`
-    : `<div class="pulse-dot offline"></div><span class="badge-text">Offline</span>`;
-}
-function showError(msg) {
-  const b = document.getElementById('error-banner');
-  document.getElementById('error-msg').textContent = `Firestore error: ${msg}`;
-  b.style.display = 'flex';
-}
-function hideError() { document.getElementById('error-banner').style.display = 'none'; }
-
-// ─────────────────────────────────────────────
-//  CLOCK + INIT
-// ─────────────────────────────────────────────
-setInterval(() => {
-  document.getElementById('live-time').textContent =
-    new Date().toLocaleString('en-IN',{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}, 1000);
-
-fetchData();
-setInterval(fetchData, 10000);
+/* ══ Init ══ */
+updateGauge(currentVOC);
+updateAlerts(currentVOC);
+buildHeatmap();
+window.addEventListener('resize', drawChart);
+setTimeout(drawChart, 80);
+setInterval(tick, 3000);
 </script>
 </body>
 </html>
