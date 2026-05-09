@@ -32,8 +32,9 @@
     color: var(--text);
     font-family: var(--sans);
     min-height: 100vh;
-    padding: 24px 16px 48px;
-    margin: 0 auto;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .dashboard-grid {
@@ -42,6 +43,9 @@
     gap: 24px;
     max-width: 1200px;
     margin: 0 auto;
+    width: 100%;
+    flex: 1;
+    padding: 24px 16px;
   }
 
   @media (min-width: 900px) {
@@ -188,23 +192,6 @@
   .alert-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
   .alert-body  { font-size: 12px; color: var(--muted); line-height: 1.4; }
   .alert-body strong { color: var(--cyan); font-family: var(--mono); }
-
-  /* ── Footer ── */
-  .footer {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 28px; padding-top: 16px;
-    border-top: 1px solid var(--border);
-  }
-  .wc-icon {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, #00d4c8, #0091a8);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-  }
-  .footer-name { font-size: 14px; font-weight: 600; color: var(--text); }
-  .footer-by   { font-size: 11px; color: var(--muted); }
-  .footer-copy { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; margin-top: 12px; }
 
   /* ══════════════════════════
      BME680 NEW STYLES
@@ -375,9 +362,135 @@
     padding: 4px 8px; border-radius: 6px; pointer-events: none;
     z-index: 999; display: none; white-space: nowrap;
   }
+
+  /* ── NAVBAR ── */
+  .dash-nav {
+    position: sticky; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 0 24px; height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(13,27,42,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .dash-nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .dash-nav-icon {
+    width: 32px; height: 32px; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .dash-nav-icon img { height: 32px; }
+  .dash-nav-text { font-family: var(--sans); font-weight: 700; font-size: 18px; color: var(--text); letter-spacing: -0.02em; }
+  .dash-nav-sub { font-size: 11px; color: var(--muted); font-family: var(--sans); }
+  .dash-nav-links { display: flex; align-items: center; gap: 6px; }
+  .dash-nav-link {
+    padding: 6px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    text-decoration: none; transition: color 0.2s, background 0.2s;
+  }
+  .dash-nav-link:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .dash-nav-cta {
+    padding: 7px 18px; border-radius: 8px;
+    background: var(--cyan); color: #0d1b2a;
+    font-size: 13px; font-weight: 700;
+    text-decoration: none; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .dash-nav-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,212,200,0.35); }
+  .dash-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 6px; }
+  .dash-hamburger span { display: block; width: 20px; height: 2px; background: var(--muted); margin: 4px 0; border-radius: 2px; transition: all 0.3s; }
+  .dash-mobile-menu {
+    display: none; position: fixed; top: 60px; left: 0; right: 0; z-index: 99;
+    background: rgba(13,27,42,0.97); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px 20px; flex-direction: column; gap: 2px;
+  }
+  .dash-mobile-menu.open { display: flex; }
+  .dash-mobile-menu a { padding: 10px 14px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+  .dash-mobile-menu a:hover { background: var(--card); color: var(--text); }
+  .dash-mobile-menu .dash-nav-cta { margin-top: 6px; text-align: center; }
+
+  /* ── FOOTER ── */
+  .dash-footer {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 20px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .dash-footer-brand { display: flex; align-items: center; gap: 10px; }
+  .dash-footer-copy { font-size: 11px; color: var(--muted); }
+
+  @media (max-width:768px) {
+    .dash-nav { padding: 0 16px; }
+    .dash-nav-links { display: none; }
+    .dash-hamburger { display: block; }
+    .dash-footer { flex-direction: column; align-items: flex-start; padding: 16px; }
+  }
+
+  @media (max-width: 600px) {
+    .dashboard-grid { gap: 12px; padding: 12px; }
+    .stats-grid { grid-template-columns: 1fr; gap: 8px; }
+    .stat-value { font-size: 22px; }
+    .env-grid { grid-template-columns: repeat(3,1fr); gap: 6px; }
+    .env-card { padding: 8px 6px; }
+    .env-val { font-size: 13px; }
+    .gauge-svg { width: 160px; height: 90px; }
+    .gauge-reading { font-size: 22px; }
+    .event-row { grid-template-columns: 60px 28px 28px 1fr auto; gap: 4px; padding: 10px 10px; }
+    .event-head { grid-template-columns: 60px 28px 28px 1fr auto; gap: 4px; padding: 6px 10px; }
+    .chip { width: 56px; font-size: 9px; padding: 4px 4px; }
+    .count { font-size: 12px; }
+    .device { font-size: 10px; }
+    .ts { font-size: 9px; }
+    .voc-banner { flex-wrap: wrap; gap: 8px; }
+    .voc-banner-val { font-size: 18px; }
+    .threshold-zones { flex-direction: column; gap: 6px; }
+    .heatmap-grid { gap: 2px; }
+    .hm-cell { height: 14px; }
+    .hm-label { font-size: 7px; }
+    .hm-col-label { font-size: 6px; }
+    .chart-card, .heatmap-card, .threshold-card, .gauge-card { padding: 10px 12px; }
+    .alert-card { padding: 10px 12px; }
+    .section-header { margin-top: 12px; }
+    .voc-banner, .gauge-card { margin-bottom: 6px; }
+  }
+
+  @media (max-width: 400px) {
+    .env-grid { grid-template-columns: 1fr 1fr; }
+    .gauge-svg { width: 130px; height: 74px; }
+    .event-row { grid-template-columns: 50px 22px 22px 1fr 60px; font-size: 10px; }
+    .event-head { grid-template-columns: 50px 22px 22px 1fr 60px; }
+    .col-label { font-size: 8px; }
+  }
 </style>
 </head>
 <body>
+
+<!-- NAVBAR -->
+<nav class="dash-nav">
+  <a href="../index.html" class="dash-nav-logo">
+    <div class="dash-nav-icon">
+      <img src="../none.png" alt="">
+    </div>
+    <div>
+      <div class="dash-nav-text">AirLoo</div>
+      <div class="dash-nav-sub">by Circuitbay</div>
+    </div>
+  </a>
+  <div class="dash-nav-links">
+    <a class="dash-nav-link" href="../index.html">Home</a>
+    <a class="dash-nav-link" href="#">Dashboard</a>
+    <a class="dash-nav-cta" href="../index.html#about">About</a>
+  </div>
+  <button class="dash-hamburger" id="dashHamburger" onclick="toggleDashMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile menu -->
+<div class="dash-mobile-menu" id="dashMobileMenu">
+  <a href="../index.html" onclick="toggleDashMenu()">Home</a>
+  <a href="#" onclick="toggleDashMenu()">Dashboard</a>
+  <a class="dash-nav-cta" href="../index.html#about" onclick="toggleDashMenu()">About</a>
+</div>
 
   <div class="dashboard-grid">
     
@@ -576,22 +689,32 @@
           </div>
         </div>
       </div>
-
-      <div class="footer">
-        <div class="wc-icon">🚻</div>
-        <div>
-          <div class="footer-name">AirLoo</div>
-          <div class="footer-by">by Circuitbay</div>
-        </div>
-      </div>
-      <div class="footer-copy">© 2026 AirLoo · Built by Nikhil Das</div>
     </div>
 
   </div>
 
+  <!-- FOOTER -->
+  <footer class="dash-footer">
+    <div class="dash-footer-brand">
+      <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--cyan),#0091a8);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+        <img src="../none.png" alt="" style="width:18px;height:18px;object-fit:contain;">
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:14px;color:var(--text);">AirLoo</div>
+        <div style="font-size:10px;color:var(--muted);">by Circuitbay</div>
+      </div>
+    </div>
+    <div class="dash-footer-copy">© 2026 AirLoo · Built by Nikhil Das</div>
+  </footer>
+
   <div class="tooltip" id="tooltip"></div>
 
 <script>
+/* ══ Mobile Menu ══ */
+function toggleDashMenu() {
+  document.getElementById('dashMobileMenu').classList.toggle('open');
+}
+
 /* ══ State ══ */
 let vocHistory = [88,95,102,118,125,130,122,140,145,142,138,145,155,160,148,142,
                   136,128,120,115,108,118,130,142,150,158,162,148,142,142];
