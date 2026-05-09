@@ -373,11 +373,7 @@
     border-bottom: 1px solid var(--border);
   }
   .dash-nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-  .dash-nav-icon {
-    width: 32px; height: 32px; display: flex;
-    align-items: center; justify-content: center;
-  }
-  .dash-nav-icon img { height: 32px; }
+  .dash-nav-logo img { height: 32px; }
   .dash-nav-text { font-family: var(--sans); font-weight: 700; font-size: 18px; color: var(--text); letter-spacing: -0.02em; }
   .dash-nav-sub { font-size: 11px; color: var(--muted); font-family: var(--sans); }
   .dash-nav-links { display: flex; align-items: center; gap: 6px; }
@@ -467,9 +463,7 @@
 <!-- NAVBAR -->
 <nav class="dash-nav">
   <a href="../index.html" class="dash-nav-logo">
-    <div class="dash-nav-icon">
-      <img src="../none.png" alt="">
-    </div>
+    <img src="../none.png" alt="">
     <div>
       <div class="dash-nav-text">AirLoo</div>
       <div class="dash-nav-sub">by Circuitbay</div>
@@ -498,15 +492,15 @@
       <div class="stats-grid" style="grid-column: 1 / -1;">
         <div class="stat-card">
           <div class="stat-label">Total Opens Today</div>
-          <div class="stat-value">48</div>
+          <div class="stat-value" id="totalOpens">--</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Peak Hour (Most Opens)</div>
-          <div class="stat-value amber">13:00 – 14:00</div>
+          <div class="stat-value amber" id="peakHour">--</div>
         </div>
         <div class="stat-card wide">
           <div class="stat-label">Last Synced</div>
-          <div class="stat-value synced" id="syncTime">3:43:14 pm</div>
+          <div class="stat-value synced" id="syncTime">--</div>
         </div>
       </div>
 
@@ -514,17 +508,17 @@
         <span>🌬️</span>
         <h2>BME680 Air Quality · VOC Monitor</h2>
       </div>
-      <p class="section-sub">Real-time gas resistance / VOC index from toilet_1</p>
+      <p class="section-sub">Real-time gas resistance / VOC index (requires BME680 data in Firebase)</p>
 
-      <div class="live-pill"><div class="live-dot"></div> LIVE · Updates every 3s</div>
+      <div class="live-pill"><div class="live-dot"></div> LIVE · Updates every 10s</div>
 
-      <div class="voc-banner moderate" id="vocBanner">
-        <div class="voc-banner-icon" id="bannerIcon">⚠️</div>
+      <div class="voc-banner" id="vocBanner">
+        <div class="voc-banner-icon" id="bannerIcon">--</div>
         <div class="voc-banner-body">
-          <div class="voc-banner-title moderate" id="bannerTitle">Moderate Air Quality</div>
-          <div class="voc-banner-sub" id="bannerSub">VOC index approaching threshold. Ventilation recommended.</div>
+          <div class="voc-banner-title" id="bannerTitle">--</div>
+          <div class="voc-banner-sub" id="bannerSub">--</div>
         </div>
-        <div class="voc-banner-val moderate" id="bannerVal">142</div>
+        <div class="voc-banner-val" id="bannerVal">--</div>
       </div>
 
       <div class="gauge-card">
@@ -535,11 +529,11 @@
           </div>
           <div style="text-align:center">
             <div class="stat-label">Threshold</div>
-            <div style="font-family:var(--mono);font-size:13px;color:var(--cyan);margin-top:2px;" id="gaugeThreshLabel">150 IAQ</div>
+            <div style="font-family:var(--mono);font-size:13px;color:var(--cyan);margin-top:2px;" id="gaugeThreshLabel">--</div>
           </div>
           <div style="text-align:right">
             <div class="stat-label">Status</div>
-            <div style="font-family:var(--mono);font-size:13px;margin-top:2px;color:var(--amber);" id="gaugeStatus">MODERATE</div>
+            <div style="font-family:var(--mono);font-size:13px;margin-top:2px;" id="gaugeStatus">--</div>
           </div>
         </div>
         <div class="gauge-wrap">
@@ -555,7 +549,7 @@
             <text x="174" y="113" fill="#6b8fa8" font-size="8" font-family="monospace">300</text>
           </svg>
           <div class="gauge-center">
-            <div class="gauge-reading" id="gaugeReading" style="color:var(--amber)">142</div>
+            <div class="gauge-reading" id="gaugeReading">--</div>
             <div class="gauge-unit">IAQ Index</div>
           </div>
         </div>
@@ -570,24 +564,24 @@
         <div class="env-card">
           <div class="env-icon">🌡️</div>
           <div class="env-label">Temp</div>
-          <div class="env-val" id="envTemp">28.4°</div>
+          <div class="env-val" id="envTemp">--</div>
         </div>
         <div class="env-card">
           <div class="env-icon">💧</div>
           <div class="env-label">Humidity</div>
-          <div class="env-val" id="envHum">67%</div>
+          <div class="env-val" id="envHum">--</div>
         </div>
         <div class="env-card">
           <div class="env-icon">📊</div>
           <div class="env-label">Pressure</div>
-          <div class="env-val" id="envPres">1012</div>
+          <div class="env-val" id="envPres">--</div>
         </div>
       </div>
 
       <div class="chart-card">
         <div class="chart-header">
           <div class="chart-title">📈 VOC Index — Last 30 minutes</div>
-          <div class="chart-badge">Live</div>
+          <div class="chart-badge">--</div>
         </div>
         <canvas id="vocChart" height="130"></canvas>
       </div>
@@ -599,7 +593,7 @@
           <span>🗓️</span>
           <h2>VOC Heatmap — Hourly Average</h2>
         </div>
-        <p class="section-sub" style="margin-bottom:10px;">This week · toilet_1</p>
+        <p class="section-sub" style="margin-bottom:10px;">Requires BME680 sensor data in Firebase</p>
         <div class="heatmap-grid" id="heatmapGrid"></div>
         <div class="heatmap-legend">
           <span class="hm-legend-label">Low</span>
@@ -611,14 +605,14 @@
       <div class="threshold-card">
         <div class="threshold-header">
           <div class="threshold-title">⚙️ Alert Threshold</div>
-          <div class="threshold-val" id="threshDisplay">150 IAQ</div>
+          <div class="threshold-val" id="threshDisplay">--</div>
         </div>
         <input type="range" id="threshSlider" min="50" max="300" value="150" step="5">
         <div class="threshold-labels"><span>50</span><span>150</span><span>300</span></div>
         <div class="threshold-zones">
           <div class="zone-chip good">✅ GOOD<br>&lt;100</div>
-          <div class="zone-chip moderate" id="zoneModerate">⚠️ MODERATE<br>100–150</div>
-          <div class="zone-chip danger" id="zoneDanger">🚨 DANGER<br>&gt;150</div>
+          <div class="zone-chip moderate" id="zoneModerate">⚠️ MODERATE<br>100–--</div>
+          <div class="zone-chip danger" id="zoneDanger">🚨 DANGER<br>&gt;--</div>
         </div>
       </div>
 
@@ -626,8 +620,8 @@
         <span>📋</span>
         <h2>Firestore Event Log</h2>
       </div>
-      <p class="section-sub">All 5 fields: event · openCount · closeCount · device · timestamp</p>
-      <span class="badge">48 records</span>
+      <p class="section-sub">Fetched from Firestore: event · openCount · closeCount · device · timestamp</p>
+      <span class="badge" id="recordCount">-- records</span>
 
       <div class="event-table">
         <div class="event-head">
@@ -637,26 +631,14 @@
           <span class="col-label">Device</span>
           <span class="col-label right">Timestamp</span>
         </div>
-        <div class="event-row">
-          <span class="chip close"><span>🔒</span> CLOSE</span>
-          <span class="count">1</span>
-          <span class="count">2</span>
-          <span class="device">toilet_1</span>
-          <span class="ts">11 Apr,<br>01:52:55 pm</span>
-        </div>
-        <div class="event-row">
-          <span class="chip open"><span>🟧</span> OPEN</span>
-          <span class="count">1</span>
-          <span class="count">1</span>
-          <span class="device">toilet_1</span>
-          <span class="ts">11 Apr,<br>01:52:35 pm</span>
-        </div>
-        <div class="event-row">
-          <span class="chip close"><span>🔒</span> CLOSE</span>
-          <span class="count">0</span>
-          <span class="count">1</span>
-          <span class="device">toilet_1</span>
-          <span class="ts">11 Apr,<br>01:52:09 pm</span>
+        <div id="eventRows">
+          <div class="event-row">
+            <span class="chip">--</span>
+            <span class="count">--</span>
+            <span class="count">--</span>
+            <span class="device">--</span>
+            <span class="ts">--</span>
+          </div>
         </div>
       </div>
 
@@ -664,28 +646,14 @@
         <span>🔔</span>
         <h2>Smart Alerts</h2>
       </div>
-      <p class="section-sub" style="margin-bottom:10px;">Generated from live Firestore + BME680 data</p>
+      <p class="section-sub" style="margin-bottom:10px;">Generated from live Firestore data</p>
 
-      <div class="alert-list">
+      <div class="alert-list" id="alertList">
         <div class="alert-card">
-          <div class="alert-dot green"></div>
+          <div class="alert-dot" id="connDot" style="background:var(--muted)"></div>
           <div>
-            <div class="alert-title">✅ Firestore Connected</div>
-            <div class="alert-body">Fetched <strong>48</strong> documents from <strong>toilet_1</strong>.</div>
-          </div>
-        </div>
-        <div class="alert-card" id="vocAlertCard" style="border-color:#f0a50055;">
-          <div class="alert-dot amber" id="vocAlertDot"></div>
-          <div>
-            <div class="alert-title" id="vocAlertTitle">⚠️ VOC Moderate — 142 IAQ</div>
-            <div class="alert-body" id="vocAlertBody">Gas level near threshold. Consider ventilating <strong>toilet_1</strong>.</div>
-          </div>
-        </div>
-        <div class="alert-card">
-          <div class="alert-dot green"></div>
-          <div>
-            <div class="alert-title">🌡️ Temp &amp; Humidity Normal</div>
-            <div class="alert-body">BME680 reads <strong>28.4°C</strong> / <strong>67% RH</strong> — within range.</div>
+            <div class="alert-title" id="connTitle">⏳ Connecting to Firestore...</div>
+            <div class="alert-body" id="connBody">Waiting for data...</div>
           </div>
         </div>
       </div>
@@ -696,9 +664,7 @@
   <!-- FOOTER -->
   <footer class="dash-footer">
     <div class="dash-footer-brand">
-      <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--cyan),#0091a8);border-radius:8px;display:flex;align-items:center;justify-content:center;">
-        <img src="../none.png" alt="" style="width:18px;height:18px;object-fit:contain;">
-      </div>
+      <img src="../none.png" alt="" style="height:32px;">
       <div>
         <div style="font-weight:600;font-size:14px;color:var(--text);">AirLoo</div>
         <div style="font-size:10px;color:var(--muted);">by Circuitbay</div>
@@ -715,191 +681,233 @@ function toggleDashMenu() {
   document.getElementById('dashMobileMenu').classList.toggle('open');
 }
 
-/* ══ State ══ */
-let vocHistory = [88,95,102,118,125,130,122,140,145,142,138,145,155,160,148,142,
-                  136,128,120,115,108,118,130,142,150,158,162,148,142,142];
-let threshold  = 150;
-let currentVOC = 142;
+/* ══ Firebase Config ══ */
+const FIREBASE_CONFIG = {
+  projectId: 'esp32-demo-project-47c9e',
+  apiKey: 'YOUR_API_KEY',
+  collection: 'events',
+};
 
-/* ══ Gauge ══ */
-function updateGauge(val) {
-  const pct = Math.min(Math.max(val / 300, 0), 1);
-  const rad = (-180 + pct * 180) * Math.PI / 180;
-  const x2 = 100 + 72 * Math.cos(rad);
-  const y2 = 100 + 72 * Math.sin(rad);
-  document.getElementById('gaugeNeedle').setAttribute('x2', x2.toFixed(1));
-  document.getElementById('gaugeNeedle').setAttribute('y2', y2.toFixed(1));
-  document.getElementById('gaugeReading').textContent = Math.round(val);
-  const col = val < 100 ? '#2ecc71' : val < threshold ? '#f0a500' : '#ff4757';
-  document.getElementById('gaugeReading').style.color = col;
-  document.getElementById('gaugeNeedle').setAttribute('stroke', col);
+const BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/${FIREBASE_CONFIG.collection}`;
+
+/* ══ State ══ */
+let allDocs = [];
+let threshold = 150;
+
+/* ══ Helpers ══ */
+function getVal(doc, field) {
+  const f = doc.fields && doc.fields[field];
+  if (!f) return null;
+  return f.stringValue || f.integerValue || f.timestampValue || null;
 }
 
-/* ══ Alerts ══ */
-function updateAlerts(val) {
-  const banner  = document.getElementById('vocBanner');
-  const icon    = document.getElementById('bannerIcon');
-  const title   = document.getElementById('bannerTitle');
-  const sub     = document.getElementById('bannerSub');
-  const bval    = document.getElementById('bannerVal');
-  const gStatus = document.getElementById('gaugeStatus');
-  const aCard   = document.getElementById('vocAlertCard');
-  const aDot    = document.getElementById('vocAlertDot');
-  const aTitle  = document.getElementById('vocAlertTitle');
-  const aBody   = document.getElementById('vocAlertBody');
+function toDate(ts) {
+  if (!ts) return null;
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d;
+}
 
-  bval.textContent = Math.round(val);
+function fmtTime(d) {
+  if (!d) return '--';
+  return d.toLocaleString('en-IN', {
+    weekday: 'short', year: 'numeric', month: 'short',
+    day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
 
-  if (val < 100) {
-    banner.className = 'voc-banner good';
-    icon.textContent = '✅';
-    title.textContent = 'Good Air Quality';
-    title.className = 'voc-banner-title good';
-    bval.className  = 'voc-banner-val good';
-    sub.textContent = 'VOC levels within safe range. Air is clean.';
-    gStatus.textContent = 'GOOD'; gStatus.style.color = '#2ecc71';
-    aCard.style.borderColor = '#2ecc7155'; aDot.className = 'alert-dot green';
-    aTitle.textContent = '✅ VOC Good — ' + Math.round(val) + ' IAQ';
-    aBody.innerHTML = 'Air quality is <strong>good</strong> at <strong>toilet_1</strong>.';
-  } else if (val < threshold) {
-    banner.className = 'voc-banner moderate';
-    icon.textContent = '⚠️';
-    title.textContent = 'Moderate Air Quality';
-    title.className = 'voc-banner-title moderate';
-    bval.className  = 'voc-banner-val moderate';
-    sub.textContent = 'VOC index approaching threshold. Ventilation recommended.';
-    gStatus.textContent = 'MODERATE'; gStatus.style.color = '#f0a500';
-    aCard.style.borderColor = '#f0a50055'; aDot.className = 'alert-dot amber';
-    aTitle.textContent = '⚠️ VOC Moderate — ' + Math.round(val) + ' IAQ';
-    aBody.innerHTML = 'Gas near threshold. Consider ventilating <strong>toilet_1</strong>.';
-  } else {
-    banner.className = 'voc-banner danger';
-    icon.textContent = '🚨';
-    title.textContent = 'DANGER — Threshold Exceeded!';
-    title.className = 'voc-banner-title danger';
-    bval.className  = 'voc-banner-val danger';
-    sub.textContent = 'Critical VOC level detected! Immediate ventilation required.';
-    gStatus.textContent = 'DANGER'; gStatus.style.color = '#ff4757';
-    aCard.style.borderColor = '#ff475788'; aDot.className = 'alert-dot red';
-    aTitle.textContent = '🚨 VOC DANGER — ' + Math.round(val) + ' IAQ';
-    aBody.innerHTML = '<strong>CRITICAL:</strong> Exceeded at <strong>toilet_1</strong>. Ventilate now!';
+function fmtShortTime(d) {
+  if (!d) return '--';
+  return d.toLocaleString('en-IN', {
+    day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
+
+/* ══ Fetch from Firestore ══ */
+async function fetchData() {
+  const url = `${BASE_URL}?key=${FIREBASE_CONFIG.apiKey}&orderBy=timestamp desc&pageSize=50`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const json = await res.json();
+    allDocs = json.documents || [];
+
+    const now = new Date();
+    document.getElementById('syncTime').textContent = fmtTime(now);
+
+    renderStats();
+    renderEventLog();
+    renderAlerts();
+  } catch (err) {
+    document.getElementById('syncTime').textContent = 'Error: ' + err.message;
+    document.getElementById('totalOpens').textContent = '--';
+    document.getElementById('peakHour').textContent = '--';
+    document.getElementById('recordCount').textContent = '-- records';
+    document.getElementById('connTitle').textContent = '❌ Firestore Error';
+    document.getElementById('connBody').textContent = err.message;
+    document.getElementById('connDot').style.background = 'var(--red)';
   }
 }
 
-/* ══ Line Chart ══ */
-function drawChart() {
-  const canvas = document.getElementById('vocChart');
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.clientWidth || 360, H = 130;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, W, H);
+/* ══ Stats ══ */
+function renderStats() {
+  if (!allDocs.length) {
+    document.getElementById('totalOpens').textContent = '0';
+    document.getElementById('peakHour').textContent = '--';
+    document.getElementById('recordCount').textContent = '0 records';
+    document.getElementById('connTitle').textContent = '✅ Firestore Connected';
+    document.getElementById('connBody').textContent = 'No documents in collection yet.';
+    document.getElementById('connDot').style.background = 'var(--muted)';
+    return;
+  }
 
-  const pad = {t:8, r:10, b:22, l:30};
-  const iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
-  const data = vocHistory;
-  const maxV = 300;
+  document.getElementById('recordCount').textContent = allDocs.length + ' records';
+  document.getElementById('connTitle').textContent = '✅ Firestore Connected';
+  document.getElementById('connBody').textContent = `Fetched ${allDocs.length} documents from Firestore.`;
+  document.getElementById('connDot').style.background = 'var(--green)';
 
-  [0, 100, threshold, 200, 300].forEach(v => {
-    const y = pad.t + iH - (v / maxV) * iH;
-    ctx.beginPath();
-    ctx.strokeStyle = v === threshold ? '#f0a50044' : '#1e3a5644';
-    ctx.lineWidth = v === threshold ? 1.5 : 1;
-    ctx.setLineDash(v === threshold ? [4,3] : [2,4]);
-    ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + iW, y);
-    ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = v === threshold ? '#f0a500aa' : '#6b8fa8';
-    ctx.font = '8px IBM Plex Mono,monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(v === threshold ? '⚑' + v : v, pad.l - 3, y + 3);
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  let opensToday = 0;
+  const hourBuckets = {};
+
+  allDocs.forEach(doc => {
+    const event = getVal(doc, 'event');
+    const ts = getVal(doc, 'timestamp');
+    const d = toDate(ts);
+    if (!d) return;
+
+    if (d.toISOString().slice(0, 10) === todayStr && event === 'OPEN') {
+      opensToday++;
+    }
+
+    const h = d.getHours();
+    if (event === 'OPEN') {
+      hourBuckets[h] = (hourBuckets[h] || 0) + 1;
+    }
   });
 
-  const ty = pad.t + iH - (threshold / maxV) * iH;
-  ctx.fillStyle = 'rgba(255,71,87,0.06)';
-  ctx.fillRect(pad.l, pad.t, iW, ty - pad.t);
+  document.getElementById('totalOpens').textContent = opensToday;
 
-  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + iH);
-  grad.addColorStop(0, 'rgba(0,212,200,0.22)');
-  grad.addColorStop(1, 'rgba(0,212,200,0)');
-  ctx.beginPath();
-  data.forEach((v, i) => {
-    const x = pad.l + (i / (data.length - 1)) * iW;
-    const y = pad.t + iH - (v / maxV) * iH;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  let peakHour = '--';
+  let peakCount = 0;
+  Object.entries(hourBuckets).forEach(([h, c]) => {
+    if (c > peakCount) { peakCount = c; peakHour = h; }
   });
-  ctx.lineTo(pad.l + iW, pad.t + iH);
-  ctx.lineTo(pad.l, pad.t + iH);
-  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-
-  ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = '#00d4c8'; ctx.setLineDash([]);
-  data.forEach((v, i) => {
-    const x = pad.l + (i / (data.length - 1)) * iW;
-    const y = pad.t + iH - (v / maxV) * iH;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }); ctx.stroke();
-
-  const lx = pad.l + iW;
-  const ly = pad.t + iH - (data[data.length-1] / maxV) * iH;
-  const dc = data[data.length-1] < 100 ? '#2ecc71' : data[data.length-1] < threshold ? '#f0a500' : '#ff4757';
-  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI*2);
-  ctx.fillStyle = dc; ctx.fill();
-  ctx.strokeStyle = '#0d1b2a'; ctx.lineWidth = 1.5; ctx.stroke();
-
-  ctx.fillStyle = '#6b8fa8'; ctx.font = '8px IBM Plex Mono,monospace'; ctx.textAlign = 'center';
-  ['-30m','-20m','-10m','now'].forEach((l, i) => {
-    ctx.fillText(l, pad.l + (i/3)*iW, H - 5);
-  });
+  document.getElementById('peakHour').textContent =
+    peakHour !== '--' ? `${peakHour.padStart(2,'0')}:00 – ${peakHour.padStart(2,'0')}:59` : '--';
 }
 
-/* ══ Heatmap ══ */
-function buildHeatmap() {
-  const grid = document.getElementById('heatmapGrid');
-  grid.innerHTML = '';
-  const days  = ['Mon','Tue','Wed','Thu','Fri'];
-  const hours = ['0h','2h','4h','6h','8h','10h','12h','14h','16h','18h','20h','22h'];
-  const rawData = [
-    [20,18,15,30,45,90,130,162,148,120,95,60],
-    [18,15,12,25,40,85,120,158,142,115,88,55],
-    [22,20,18,35,55,95,140,170,155,130,100,70],
-    [25,22,20,40,60,100,145,175,160,138,108,75],
-    [28,24,20,45,68,110,152,180,162,142,112,80],
-  ];
-  const tooltip = document.getElementById('tooltip');
+/* ══ Event Log ══ */
+function renderEventLog() {
+  const container = document.getElementById('eventRows');
+  if (!allDocs.length) {
+    container.innerHTML = `<div class="event-row"><span class="chip">--</span><span class="count">--</span><span class="count">--</span><span class="device">--</span><span class="ts">--</span></div>`;
+    return;
+  }
 
-  grid.appendChild(document.createElement('div'));
-  hours.forEach(h => {
-    const el = document.createElement('div');
-    el.className = 'hm-col-label'; el.textContent = h;
-    grid.appendChild(el);
+  container.innerHTML = allDocs.slice(0, 20).map(doc => {
+    const event = getVal(doc, 'event') || '--';
+    const openC = getVal(doc, 'openCount') || '--';
+    const closeC = getVal(doc, 'closeCount') || '--';
+    const device = getVal(doc, 'device') || '--';
+    const ts = getVal(doc, 'timestamp');
+    const d = toDate(ts);
+    const isOpen = event === 'OPEN';
+    const chipClass = isOpen ? 'chip open' : 'chip close';
+    const icon = isOpen ? '🟧' : '🔒';
+
+    return `<div class="event-row">
+      <span class="${chipClass}"><span>${icon}</span> ${event}</span>
+      <span class="count">${openC}</span>
+      <span class="count">${closeC}</span>
+      <span class="device">${device}</span>
+      <span class="ts">${fmtShortTime(d)}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ══ Alerts ══ */
+function renderAlerts() {
+  const container = document.getElementById('alertList');
+
+  if (!allDocs.length) return;
+
+  const latest = allDocs[0];
+  const event = getVal(latest, 'event') || '--';
+  const device = getVal(latest, 'device') || '--';
+  const ts = getVal(latest, 'timestamp');
+  const d = toDate(ts);
+
+  let alerts = [];
+
+  alerts.push({
+    color: 'var(--green)',
+    title: '✅ Firestore Connected',
+    body: `Fetched <strong>${allDocs.length}</strong> documents from Firestore.`
   });
 
-  days.forEach((day, di) => {
-    const rl = document.createElement('div');
-    rl.className = 'hm-label'; rl.textContent = day;
-    grid.appendChild(rl);
-    rawData[di].forEach((val, hi) => {
-      const cell = document.createElement('div');
-      cell.className = 'hm-cell';
-      const pct = Math.min(val / 200, 1);
-      let r, g, b;
-      if (pct < .5) {
-        r = Math.round(pct*2*240); g = Math.round(160 + pct*2*40); b = 40;
-      } else {
-        r = Math.round(240 + (pct-.5)*2*15); g = Math.round(200 - (pct-.5)*2*160); b = 40;
-      }
-      cell.style.background = `rgb(${r},${g},${b})`;
-      cell.style.opacity = 0.25 + pct * 0.75;
-      cell.addEventListener('mousemove', e => {
-        tooltip.style.display = 'block';
-        tooltip.style.left = (e.clientX + 10) + 'px';
-        tooltip.style.top  = (e.clientY - 28) + 'px';
-        tooltip.textContent = `${day} ${hours[hi]}: ${val} IAQ`;
-      });
-      cell.addEventListener('mouseleave', () => tooltip.style.display = 'none');
-      grid.appendChild(cell);
+  if (event === 'OPEN') {
+    alerts.push({
+      color: 'var(--amber)',
+      title: '⚠️ Door Currently Open',
+      body: `<strong>${device}</strong> was last opened at ${fmtShortTime(d)}.`
     });
-  });
+  } else {
+    alerts.push({
+      color: 'var(--green)',
+      title: '🔒 Door Currently Closed',
+      body: `<strong>${device}</strong> was last closed at ${fmtShortTime(d)}.`
+    });
+  }
+
+  if (d && (Date.now() - d.getTime()) > 3600000) {
+    alerts.push({
+      color: 'var(--sky)',
+      title: '🔇 No Recent Activity',
+      body: `Last event was ${Math.round((Date.now() - d.getTime()) / 60000)} minutes ago.`
+    });
+  }
+
+  const count = allDocs.length;
+  if (count >= 50) {
+    alerts.push({
+      color: 'var(--rose)',
+      title: '🚨 High Usage Alert',
+      body: `${count} sessions recorded.`
+    });
+  }
+
+  container.innerHTML = alerts.map(a =>
+    `<div class="alert-card">
+      <div class="alert-dot" style="background:${a.color}"></div>
+      <div>
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-body">${a.body}</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+/* ══ Gauge (VOC — shows -- until BME680 data is available) ══ */
+function setGaugeUnavailable() {
+  document.getElementById('gaugeReading').textContent = '--';
+  document.getElementById('gaugeReading').style.color = 'var(--muted)';
+  document.getElementById('gaugeNeedle').setAttribute('x2', '100');
+  document.getElementById('gaugeNeedle').setAttribute('y2', '40');
+  document.getElementById('gaugeNeedle').setAttribute('stroke', 'var(--muted)');
+  document.getElementById('gaugeStatus').textContent = '--';
+  document.getElementById('gaugeStatus').style.color = 'var(--muted)';
+  document.getElementById('gaugeThreshLabel').textContent = threshold + ' IAQ';
+  document.getElementById('bannerVal').textContent = '--';
+  document.getElementById('vocBanner').className = 'voc-banner';
+  document.getElementById('vocBanner').style.borderColor = 'var(--border)';
+  document.getElementById('bannerIcon').textContent = '--';
+  document.getElementById('bannerTitle').textContent = 'BME680 data not available';
+  document.getElementById('bannerTitle').style.color = 'var(--muted)';
+  document.getElementById('bannerSub').textContent = 'Waiting for BME680 sensor data in Firebase...';
 }
 
 /* ══ Threshold Slider ══ */
@@ -912,35 +920,18 @@ slider.addEventListener('input', () => {
   document.getElementById('zoneDanger').innerHTML   = `🚨 DANGER<br>&gt;${threshold}`;
   const pct = ((threshold - 50) / 250) * 100;
   slider.style.background = `linear-gradient(to right, var(--cyan) 0%, var(--cyan) ${pct}%, var(--border) ${pct}%)`;
-  updateAlerts(currentVOC);
-  drawChart();
 });
-slider.style.background = `linear-gradient(to right, var(--cyan) 0%, var(--cyan) 40%, var(--border) 40%)`;
-
-/* ══ Live tick every 3s ══ */
-function tick() {
-  const delta = (Math.random() - 0.44) * 14;
-  currentVOC = Math.max(30, Math.min(285, currentVOC + delta));
-  vocHistory.push(Math.round(currentVOC));
-  if (vocHistory.length > 30) vocHistory.shift();
-  updateGauge(currentVOC);
-  updateAlerts(currentVOC);
-  drawChart();
-  document.getElementById('envTemp').textContent = (28.4 + (Math.random()-.5)*.5).toFixed(1) + '°';
-  document.getElementById('envHum').textContent  = Math.round(67 + (Math.random()-.5)*3) + '%';
-  document.getElementById('envPres').textContent = Math.round(1012 + (Math.random()-.5)*2);
-  const now = new Date();
-  document.getElementById('syncTime').textContent =
-    now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-}
+slider.value = threshold;
+slider.dispatchEvent(new Event('input'));
 
 /* ══ Init ══ */
-updateGauge(currentVOC);
-updateAlerts(currentVOC);
-buildHeatmap();
-window.addEventListener('resize', drawChart);
-setTimeout(drawChart, 80);
-setInterval(tick, 3000);
+setGaugeUnavailable();
+document.getElementById('envTemp').textContent = '--';
+document.getElementById('envHum').textContent = '--';
+document.getElementById('envPres').textContent = '--';
+
+fetchData();
+setInterval(fetchData, 10000);
 </script>
 </body>
 </html>
