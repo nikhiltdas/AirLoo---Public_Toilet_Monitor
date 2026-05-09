@@ -4,7 +4,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "time.h"
-#include "secrets.h"   // 🔐 your credentials here
+#include "secrets.h" 
 
 // -------- OLED --------
 #define SCREEN_WIDTH 128
