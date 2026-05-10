@@ -1,0 +1,256 @@
+/* ══ Mobile Menu ══ */
+function toggleDashMenu() {
+  document.getElementById('dashMobileMenu').classList.toggle('open');
+}
+
+/* ══ Firebase Config ══ */
+const FIREBASE_CONFIG = {
+  projectId: ENV.FIREBASE_PROJECT_ID,
+  apiKey: ENV.FIREBASE_API_KEY,
+  collection: ENV.FIRESTORE_COLLECTION,
+};
+
+const BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/${FIREBASE_CONFIG.collection}`;
+
+/* ══ State ══ */
+let allDocs = [];
+let threshold = 150;
+
+/* ══ Helpers ══ */
+function getVal(doc, field) {
+  const f = doc.fields && doc.fields[field];
+  if (!f) return null;
+  return f.stringValue || f.integerValue || f.timestampValue || null;
+}
+
+function toDate(ts) {
+  if (!ts) return null;
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function fmtTime(d) {
+  if (!d) return '--';
+  return d.toLocaleString('en-IN', {
+    weekday: 'short', year: 'numeric', month: 'short',
+    day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
+
+function fmtShortTime(d) {
+  if (!d) return '--';
+  return d.toLocaleString('en-IN', {
+    day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
+
+/* ══ Fetch from Firestore ══ */
+async function fetchData() {
+  const url = `${BASE_URL}?key=${FIREBASE_CONFIG.apiKey}&orderBy=timestamp desc&pageSize=50`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const json = await res.json();
+    allDocs = json.documents || [];
+
+    const now = new Date();
+    document.getElementById('syncTime').textContent = fmtTime(now);
+
+    renderStats();
+    renderEventLog();
+    renderAlerts();
+  } catch (err) {
+    document.getElementById('syncTime').textContent = 'Error: ' + err.message;
+    document.getElementById('totalOpens').textContent = '--';
+    document.getElementById('peakHour').textContent = '--';
+    document.getElementById('recordCount').textContent = '-- records';
+    document.getElementById('connTitle').textContent = '❌ Firestore Error';
+    document.getElementById('connBody').textContent = err.message;
+    document.getElementById('connDot').style.background = 'var(--red)';
+  }
+}
+
+/* ══ Stats ══ */
+function renderStats() {
+  if (!allDocs.length) {
+    document.getElementById('totalOpens').textContent = '0';
+    document.getElementById('peakHour').textContent = '--';
+    document.getElementById('recordCount').textContent = '0 records';
+    document.getElementById('connTitle').textContent = '✅ Firestore Connected';
+    document.getElementById('connBody').textContent = 'No documents in collection yet.';
+    document.getElementById('connDot').style.background = 'var(--muted)';
+    return;
+  }
+
+  document.getElementById('recordCount').textContent = allDocs.length + ' records';
+  document.getElementById('connTitle').textContent = '✅ Firestore Connected';
+  document.getElementById('connBody').textContent = `Fetched ${allDocs.length} documents from Firestore.`;
+  document.getElementById('connDot').style.background = 'var(--green)';
+
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  let opensToday = 0;
+  const hourBuckets = {};
+
+  allDocs.forEach(doc => {
+    const event = getVal(doc, 'event');
+    const ts = getVal(doc, 'timestamp');
+    const d = toDate(ts);
+    if (!d) return;
+
+    if (d.toISOString().slice(0, 10) === todayStr && event === 'OPEN') {
+      opensToday++;
+    }
+
+    const h = d.getHours();
+    if (event === 'OPEN') {
+      hourBuckets[h] = (hourBuckets[h] || 0) + 1;
+    }
+  });
+
+  document.getElementById('totalOpens').textContent = opensToday;
+
+  let peakHour = '--';
+  let peakCount = 0;
+  Object.entries(hourBuckets).forEach(([h, c]) => {
+    if (c > peakCount) { peakCount = c; peakHour = h; }
+  });
+  document.getElementById('peakHour').textContent =
+    peakHour !== '--' ? `${peakHour.padStart(2,'0')}:00 – ${peakHour.padStart(2,'0')}:59` : '--';
+}
+
+/* ══ Event Log ══ */
+function renderEventLog() {
+  const container = document.getElementById('eventRows');
+  if (!allDocs.length) {
+    container.innerHTML = `<div class="event-row"><span class="chip">--</span><span class="count">--</span><span class="count">--</span><span class="device">--</span><span class="ts">--</span></div>`;
+    return;
+  }
+
+  container.innerHTML = allDocs.slice(0, 20).map(doc => {
+    const event = getVal(doc, 'event') || '--';
+    const openC = getVal(doc, 'openCount') || '--';
+    const closeC = getVal(doc, 'closeCount') || '--';
+    const device = getVal(doc, 'device') || '--';
+    const ts = getVal(doc, 'timestamp');
+    const d = toDate(ts);
+    const isOpen = event === 'OPEN';
+    const chipClass = isOpen ? 'chip open' : 'chip close';
+    const icon = isOpen ? '🟧' : '🔒';
+
+    return `<div class="event-row">
+      <span class="${chipClass}"><span>${icon}</span> ${event}</span>
+      <span class="count">${openC}</span>
+      <span class="count">${closeC}</span>
+      <span class="device">${device}</span>
+      <span class="ts">${fmtShortTime(d)}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ══ Alerts ══ */
+function renderAlerts() {
+  const container = document.getElementById('alertList');
+
+  if (!allDocs.length) return;
+
+  const latest = allDocs[0];
+  const event = getVal(latest, 'event') || '--';
+  const device = getVal(latest, 'device') || '--';
+  const ts = getVal(latest, 'timestamp');
+  const d = toDate(ts);
+
+  let alerts = [];
+
+  alerts.push({
+    color: 'var(--green)',
+    title: '✅ Firestore Connected',
+    body: `Fetched <strong>${allDocs.length}</strong> documents from Firestore.`
+  });
+
+  if (event === 'OPEN') {
+    alerts.push({
+      color: 'var(--amber)',
+      title: '⚠️ Door Currently Open',
+      body: `<strong>${device}</strong> was last opened at ${fmtShortTime(d)}.`
+    });
+  } else {
+    alerts.push({
+      color: 'var(--green)',
+      title: '🔒 Door Currently Closed',
+      body: `<strong>${device}</strong> was last closed at ${fmtShortTime(d)}.`
+    });
+  }
+
+  if (d && (Date.now() - d.getTime()) > 3600000) {
+    alerts.push({
+      color: 'var(--sky)',
+      title: '🔇 No Recent Activity',
+      body: `Last event was ${Math.round((Date.now() - d.getTime()) / 60000)} minutes ago.`
+    });
+  }
+
+  const count = allDocs.length;
+  if (count >= 50) {
+    alerts.push({
+      color: 'var(--rose)',
+      title: '🚨 High Usage Alert',
+      body: `${count} sessions recorded.`
+    });
+  }
+
+  container.innerHTML = alerts.map(a =>
+    `<div class="alert-card">
+      <div class="alert-dot" style="background:${a.color}"></div>
+      <div>
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-body">${a.body}</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+/* ══ Gauge (VOC — shows -- until BME680 data is available) ══ */
+function setGaugeUnavailable() {
+  document.getElementById('gaugeReading').textContent = '--';
+  document.getElementById('gaugeReading').style.color = 'var(--muted)';
+  document.getElementById('gaugeNeedle').setAttribute('x2', '100');
+  document.getElementById('gaugeNeedle').setAttribute('y2', '40');
+  document.getElementById('gaugeNeedle').setAttribute('stroke', 'var(--muted)');
+  document.getElementById('gaugeStatus').textContent = '--';
+  document.getElementById('gaugeStatus').style.color = 'var(--muted)';
+  document.getElementById('gaugeThreshLabel').textContent = threshold + ' IAQ';
+  document.getElementById('bannerVal').textContent = '--';
+  document.getElementById('vocBanner').className = 'voc-banner';
+  document.getElementById('vocBanner').style.borderColor = 'var(--border)';
+  document.getElementById('bannerIcon').textContent = '--';
+  document.getElementById('bannerTitle').textContent = 'BME680 data not available';
+  document.getElementById('bannerTitle').style.color = 'var(--muted)';
+  document.getElementById('bannerSub').textContent = 'Waiting for BME680 sensor data in Firebase...';
+}
+
+/* ══ Threshold Slider ══ */
+const slider = document.getElementById('threshSlider');
+slider.addEventListener('input', () => {
+  threshold = parseInt(slider.value);
+  document.getElementById('threshDisplay').textContent = threshold + ' IAQ';
+  document.getElementById('gaugeThreshLabel').textContent = threshold + ' IAQ';
+  document.getElementById('zoneModerate').innerHTML = `⚠️ MODERATE<br>100–${threshold}`;
+  document.getElementById('zoneDanger').innerHTML   = `🚨 DANGER<br>&gt;${threshold}`;
+  const pct = ((threshold - 50) / 250) * 100;
+  slider.style.background = `linear-gradient(to right, var(--cyan) 0%, var(--cyan) ${pct}%, var(--border) ${pct}%)`;
+});
+slider.value = threshold;
+slider.dispatchEvent(new Event('input'));
+
+/* ══ Init ══ */
+setGaugeUnavailable();
+document.getElementById('envTemp').textContent = '--';
+document.getElementById('envHum').textContent = '--';
+document.getElementById('envPres').textContent = '--';
+
+fetchData();
+setInterval(fetchData, 10000);
