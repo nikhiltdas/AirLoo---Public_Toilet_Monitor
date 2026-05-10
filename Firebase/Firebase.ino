@@ -150,7 +150,6 @@ void sendToFirestore(String eventType, String timestamp) {
 
     String payload = "{ \"fields\": {"
                      "\"event\": {\"stringValue\": \"" + eventType + "\"},"
-                     "\"status\": {\"stringValue\": \"" + eventType + "\"},"
                      "\"openCount\": {\"integerValue\": \"" + String(openCount) + "\"},"
                      "\"closeCount\": {\"integerValue\": \"" + String(closeCount) + "\"},"
                      "\"timestamp\": {\"timestampValue\": \"" + timestamp + "\"},"
