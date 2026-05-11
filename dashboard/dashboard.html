@@ -5,379 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AirLoo · Circuitbay</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0d1b2a;
-    --surface: #112236;
-    --card: #152840;
-    --border: #1e3a56;
-    --cyan: #00d4c8;
-    --amber: #f0a500;
-    --green: #2ecc71;
-    --red: #ff4757;
-    --text: #cde4f5;
-    --muted: #6b8fa8;
-    --open-bg: #1a3020;
-    --open-fg: #2ecc71;
-    --close-bg: #1a2640;
-    --close-fg: #00d4c8;
-    --mono: 'IBM Plex Mono', monospace;
-    --sans: 'IBM Plex Sans', sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    padding: 24px 16px 48px;
-    margin: 0 auto;
-  }
-
-  .dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  @media (min-width: 900px) {
-    .dashboard-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  /* ── Stats Row ── */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .stat-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-  }
-  .stat-card.wide { grid-column: 1 / -1; }
-  .stat-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .stat-value {
-    font-family: var(--mono);
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--cyan);
-    line-height: 1;
-  }
-  .stat-value.amber  { color: var(--amber); font-size: 22px; }
-  .stat-value.synced { color: var(--amber); font-size: 18px; }
-
-  /* ── Section Header ── */
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 20px 0 4px;
-  }
-  .section-header h2 {
-    font-family: var(--sans);
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .section-sub {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
-  .badge {
-    background: #00d4c822;
-    border: 1px solid var(--cyan);
-    color: var(--cyan);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    display: inline-block;
-    margin-bottom: 12px;
-  }
-
-  /* ── Event Log Table ── */
-  .event-table {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .event-row {
-    display: grid;
-    grid-template-columns: 72px 36px 36px 1fr auto;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .event-row:last-child { border-bottom: none; }
-  .chip {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    border-radius: 8px;
-    padding: 5px 8px;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    width: 68px;
-  }
-  .chip.open  { background: var(--open-bg);  color: var(--open-fg);  border: 1px solid #2ecc7155; }
-  .chip.close { background: var(--close-bg); color: var(--close-fg); border: 1px solid #00d4c855; }
-  .count  { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--cyan); text-align: center; }
-  .device { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-  .ts     { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: right; white-space: nowrap; }
-  .event-head {
-    display: grid;
-    grid-template-columns: 72px 36px 36px 1fr auto;
-    gap: 8px;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    background: #0d1b2a88;
-  }
-  .col-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.07em;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-  .col-label.center { text-align: center; }
-  .col-label.right  { text-align: right; }
-
-  /* ── Alerts ── */
-  .alert-list { display: flex; flex-direction: column; gap: 8px; }
-  .alert-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .alert-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    margin-top: 4px;
-    flex-shrink: 0;
-  }
-  .alert-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .alert-dot.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-  .alert-dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); animation: blink 1s infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
-  .alert-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-  .alert-body  { font-size: 12px; color: var(--muted); line-height: 1.4; }
-  .alert-body strong { color: var(--cyan); font-family: var(--mono); }
-
-  /* ── Footer ── */
-  .footer {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 28px; padding-top: 16px;
-    border-top: 1px solid var(--border);
-  }
-  .wc-icon {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, #00d4c8, #0091a8);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-  }
-  .footer-name { font-size: 14px; font-weight: 600; color: var(--text); }
-  .footer-by   { font-size: 11px; color: var(--muted); }
-  .footer-copy { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; margin-top: 12px; }
-
-  /* ══════════════════════════
-     BME680 NEW STYLES
-     (same card/token language)
-  ══════════════════════════ */
-
-  /* Live pill — reuses same .badge token family */
-  .live-pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: #0f2e1a; border: 1px solid #2ecc7166;
-    color: var(--green); font-family: var(--mono); font-size: 10px;
-    padding: 3px 10px; border-radius: 999px; margin-bottom: 12px;
-  }
-  .live-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--green); box-shadow: 0 0 6px var(--green);
-    animation: pulse 1.4s infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-  /* VOC Alert Banner — same border-radius/padding as .alert-card */
-  .voc-banner {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 10px;
-    transition: border-color .3s, background .3s;
-  }
-  .voc-banner.good     { background: #0f2e1a; border-color: #2ecc7166; }
-  .voc-banner.moderate { background: #2a1f08; border-color: #f0a50066; }
-  .voc-banner.danger   { background: #2a0a0a; border-color: #ff475799; animation: dangerPulse 1.6s infinite; }
-  @keyframes dangerPulse { 0%,100%{border-color:#ff475766} 50%{border-color:#ff4757dd} }
-  .voc-banner-icon  { font-size: 24px; flex-shrink: 0; }
-  .voc-banner-body  { flex: 1; }
-  .voc-banner-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-  .voc-banner-title.good     { color: var(--green); }
-  .voc-banner-title.moderate { color: var(--amber); }
-  .voc-banner-title.danger   { color: var(--red); }
-  .voc-banner-sub    { font-size: 12px; color: var(--muted); line-height: 1.4; }
-  .voc-banner-val    { font-family: var(--mono); font-size: 22px; font-weight: 600; flex-shrink: 0; }
-  .voc-banner-val.good     { color: var(--green); }
-  .voc-banner-val.moderate { color: var(--amber); }
-  .voc-banner-val.danger   { color: var(--red); }
-
-  /* Gauge card — same .stat-card base */
-  .gauge-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .gauge-top {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    margin-bottom: 10px;
-  }
-  .gauge-wrap { display: flex; justify-content: center; position: relative; }
-  .gauge-svg  { width: 200px; height: 112px; }
-  .gauge-center {
-    position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%);
-    text-align: center;
-  }
-  .gauge-reading { font-family: var(--mono); font-size: 28px; font-weight: 600; line-height: 1; }
-  .gauge-unit    { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-  .gauge-legend  { display: flex; justify-content: space-between; margin-top: 10px; }
-  .legend-item   { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
-  .legend-dot    { width: 8px; height: 8px; border-radius: 50%; }
-
-  /* Env 3-col — same card token */
-  .env-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 10px; }
-  .env-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 10px;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-  }
-  .env-icon  { font-size: 18px; }
-  .env-label { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing:.06em; }
-  .env-val   { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--cyan); }
-
-  /* Chart card — same card token */
-  .chart-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .chart-title  { font-size: 13px; font-weight: 600; color: var(--text); }
-  .chart-badge  {
-    font-family: var(--mono); font-size: 10px; color: var(--cyan);
-    background: #00d4c811; border: 1px solid #00d4c833;
-    padding: 2px 9px; border-radius: 999px;
-  }
-  canvas { width: 100% !important; display: block; }
-
-  /* Heatmap card — same card token */
-  .heatmap-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .heatmap-grid {
-    display: grid;
-    grid-template-columns: 28px repeat(12, 1fr);
-    gap: 3px;
-  }
-  .hm-label {
-    font-family: var(--mono); font-size: 8px; color: var(--muted);
-    display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;
-  }
-  .hm-col-label {
-    font-family: var(--mono); font-size: 7px; color: var(--muted);
-    text-align: center; padding-bottom: 2px;
-  }
-  .hm-cell {
-    height: 20px; border-radius: 3px;
-    transition: transform .15s; cursor: pointer;
-  }
-  .hm-cell:hover { transform: scale(1.2); z-index: 2; }
-  .heatmap-legend { display: flex; align-items: center; gap: 6px; margin-top: 8px; justify-content: flex-end; }
-  .hm-legend-bar  { width: 80px; height: 7px; border-radius: 4px; background: linear-gradient(to right, #1a4a2a, #f0a500, #ff4757); }
-  .hm-legend-label { font-family: var(--mono); font-size: 9px; color: var(--muted); }
-
-  /* Threshold card — same card token */
-  .threshold-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .threshold-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .threshold-title  { font-size: 13px; font-weight: 600; color: var(--text); }
-  .threshold-val    { font-family: var(--mono); font-size: 13px; color: var(--amber); font-weight: 600; }
-  input[type=range] {
-    width: 100%; -webkit-appearance: none; height: 6px;
-    border-radius: 3px; outline: none; cursor: pointer;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
-    background: var(--amber); border: 2px solid var(--bg);
-    box-shadow: 0 0 6px var(--amber);
-  }
-  .threshold-labels {
-    display: flex; justify-content: space-between; margin-top: 5px;
-    font-family: var(--mono); font-size: 9px; color: var(--muted);
-  }
-  .threshold-zones { display: flex; gap: 8px; margin-top: 12px; }
-  .zone-chip {
-    flex: 1; padding: 7px 4px; border-radius: 8px; text-align: center;
-    font-family: var(--mono); font-size: 9px; font-weight: 600; border: 1px solid; line-height: 1.5;
-  }
-  .zone-chip.good     { background:#0f2e1a; border-color:#2ecc7144; color:var(--green); }
-  .zone-chip.moderate { background:#2a1f08; border-color:#f0a50044; color:var(--amber); }
-  .zone-chip.danger   { background:#2a0a0a; border-color:#ff475744; color:var(--red); }
-
-  /* Tooltip */
-  .tooltip {
-    position: fixed; background: #0d1b2a; border: 1px solid var(--border);
-    color: var(--text); font-family: var(--mono); font-size: 10px;
-    padding: 4px 8px; border-radius: 6px; pointer-events: none;
-    z-index: 999; display: none; white-space: nowrap;
-  }
-</style>
+<link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
+
+<!-- NAVBAR -->
+<nav class="dash-nav">
+  <a href="../index.html" class="dash-nav-logo">
+    <img src="../none.png" alt="">
+    <div>
+      <div class="dash-nav-text">AirLoo</div>
+      <div class="dash-nav-sub">by Circuitbay</div>
+    </div>
+  </a>
+  <div class="dash-nav-links">
+    <a class="dash-nav-link" href="../index.html">Home</a>
+    <a class="dash-nav-link" href="#">Dashboard</a>
+    <a class="dash-nav-cta" href="../index.html#about">About</a>
+  </div>
+  <button class="dash-hamburger" id="dashHamburger" onclick="toggleDashMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile menu -->
+<div class="dash-mobile-menu" id="dashMobileMenu">
+  <a href="../index.html" onclick="toggleDashMenu()">Home</a>
+  <a href="#" onclick="toggleDashMenu()">Dashboard</a>
+  <a class="dash-nav-cta" href="../index.html#about" onclick="toggleDashMenu()">About</a>
+</div>
 
   <div class="dashboard-grid">
     
@@ -385,15 +41,15 @@
       <div class="stats-grid" style="grid-column: 1 / -1;">
         <div class="stat-card">
           <div class="stat-label">Total Opens Today</div>
-          <div class="stat-value">48</div>
+          <div class="stat-value" id="totalOpens">--</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Peak Hour (Most Opens)</div>
-          <div class="stat-value amber">13:00 – 14:00</div>
+          <div class="stat-value amber" id="peakHour">--</div>
         </div>
         <div class="stat-card wide">
           <div class="stat-label">Last Synced</div>
-          <div class="stat-value synced" id="syncTime">3:43:14 pm</div>
+          <div class="stat-value synced" id="syncTime">--</div>
         </div>
       </div>
 
@@ -401,17 +57,17 @@
         <span>🌬️</span>
         <h2>BME680 Air Quality · VOC Monitor</h2>
       </div>
-      <p class="section-sub">Real-time gas resistance / VOC index from toilet_1</p>
+      <p class="section-sub">Real-time gas resistance / VOC index (requires BME680 data in Firebase)</p>
 
-      <div class="live-pill"><div class="live-dot"></div> LIVE · Updates every 3s</div>
+      <div class="live-pill"><div class="live-dot"></div> LIVE · Updates every 10s</div>
 
-      <div class="voc-banner moderate" id="vocBanner">
-        <div class="voc-banner-icon" id="bannerIcon">⚠️</div>
+      <div class="voc-banner" id="vocBanner">
+        <div class="voc-banner-icon" id="bannerIcon">--</div>
         <div class="voc-banner-body">
-          <div class="voc-banner-title moderate" id="bannerTitle">Moderate Air Quality</div>
-          <div class="voc-banner-sub" id="bannerSub">VOC index approaching threshold. Ventilation recommended.</div>
+          <div class="voc-banner-title" id="bannerTitle">--</div>
+          <div class="voc-banner-sub" id="bannerSub">--</div>
         </div>
-        <div class="voc-banner-val moderate" id="bannerVal">142</div>
+        <div class="voc-banner-val" id="bannerVal">--</div>
       </div>
 
       <div class="gauge-card">
@@ -422,11 +78,11 @@
           </div>
           <div style="text-align:center">
             <div class="stat-label">Threshold</div>
-            <div style="font-family:var(--mono);font-size:13px;color:var(--cyan);margin-top:2px;" id="gaugeThreshLabel">150 IAQ</div>
+            <div style="font-family:var(--mono);font-size:13px;color:var(--cyan);margin-top:2px;" id="gaugeThreshLabel">--</div>
           </div>
           <div style="text-align:right">
             <div class="stat-label">Status</div>
-            <div style="font-family:var(--mono);font-size:13px;margin-top:2px;color:var(--amber);" id="gaugeStatus">MODERATE</div>
+            <div style="font-family:var(--mono);font-size:13px;margin-top:2px;" id="gaugeStatus">--</div>
           </div>
         </div>
         <div class="gauge-wrap">
@@ -442,7 +98,7 @@
             <text x="174" y="113" fill="#6b8fa8" font-size="8" font-family="monospace">300</text>
           </svg>
           <div class="gauge-center">
-            <div class="gauge-reading" id="gaugeReading" style="color:var(--amber)">142</div>
+            <div class="gauge-reading" id="gaugeReading">--</div>
             <div class="gauge-unit">IAQ Index</div>
           </div>
         </div>
@@ -457,24 +113,24 @@
         <div class="env-card">
           <div class="env-icon">🌡️</div>
           <div class="env-label">Temp</div>
-          <div class="env-val" id="envTemp">28.4°</div>
+          <div class="env-val" id="envTemp">--</div>
         </div>
         <div class="env-card">
           <div class="env-icon">💧</div>
           <div class="env-label">Humidity</div>
-          <div class="env-val" id="envHum">67%</div>
+          <div class="env-val" id="envHum">--</div>
         </div>
         <div class="env-card">
           <div class="env-icon">📊</div>
           <div class="env-label">Pressure</div>
-          <div class="env-val" id="envPres">1012</div>
+          <div class="env-val" id="envPres">--</div>
         </div>
       </div>
 
       <div class="chart-card">
         <div class="chart-header">
           <div class="chart-title">📈 VOC Index — Last 30 minutes</div>
-          <div class="chart-badge">Live</div>
+          <div class="chart-badge">--</div>
         </div>
         <canvas id="vocChart" height="130"></canvas>
       </div>
@@ -486,7 +142,7 @@
           <span>🗓️</span>
           <h2>VOC Heatmap — Hourly Average</h2>
         </div>
-        <p class="section-sub" style="margin-bottom:10px;">This week · toilet_1</p>
+        <p class="section-sub" style="margin-bottom:10px;">Requires BME680 sensor data in Firebase</p>
         <div class="heatmap-grid" id="heatmapGrid"></div>
         <div class="heatmap-legend">
           <span class="hm-legend-label">Low</span>
@@ -498,14 +154,14 @@
       <div class="threshold-card">
         <div class="threshold-header">
           <div class="threshold-title">⚙️ Alert Threshold</div>
-          <div class="threshold-val" id="threshDisplay">150 IAQ</div>
+          <div class="threshold-val" id="threshDisplay">--</div>
         </div>
         <input type="range" id="threshSlider" min="50" max="300" value="150" step="5">
         <div class="threshold-labels"><span>50</span><span>150</span><span>300</span></div>
         <div class="threshold-zones">
           <div class="zone-chip good">✅ GOOD<br>&lt;100</div>
-          <div class="zone-chip moderate" id="zoneModerate">⚠️ MODERATE<br>100–150</div>
-          <div class="zone-chip danger" id="zoneDanger">🚨 DANGER<br>&gt;150</div>
+          <div class="zone-chip moderate" id="zoneModerate">⚠️ MODERATE<br>100–--</div>
+          <div class="zone-chip danger" id="zoneDanger">🚨 DANGER<br>&gt;--</div>
         </div>
       </div>
 
@@ -513,8 +169,8 @@
         <span>📋</span>
         <h2>Firestore Event Log</h2>
       </div>
-      <p class="section-sub">All 5 fields: event · openCount · closeCount · device · timestamp</p>
-      <span class="badge">48 records</span>
+      <p class="section-sub">Fetched from Firestore: event · openCount · closeCount · device · timestamp</p>
+      <span class="badge" id="recordCount">-- records</span>
 
       <div class="event-table">
         <div class="event-head">
@@ -524,26 +180,14 @@
           <span class="col-label">Device</span>
           <span class="col-label right">Timestamp</span>
         </div>
-        <div class="event-row">
-          <span class="chip close"><span>🔒</span> CLOSE</span>
-          <span class="count">1</span>
-          <span class="count">2</span>
-          <span class="device">toilet_1</span>
-          <span class="ts">11 Apr,<br>01:52:55 pm</span>
-        </div>
-        <div class="event-row">
-          <span class="chip open"><span>🟧</span> OPEN</span>
-          <span class="count">1</span>
-          <span class="count">1</span>
-          <span class="device">toilet_1</span>
-          <span class="ts">11 Apr,<br>01:52:35 pm</span>
-        </div>
-        <div class="event-row">
-          <span class="chip close"><span>🔒</span> CLOSE</span>
-          <span class="count">0</span>
-          <span class="count">1</span>
-          <span class="device">toilet_1</span>
-          <span class="ts">11 Apr,<br>01:52:09 pm</span>
+        <div id="eventRows">
+          <div class="event-row">
+            <span class="chip">--</span>
+            <span class="count">--</span>
+            <span class="count">--</span>
+            <span class="device">--</span>
+            <span class="ts">--</span>
+          </div>
         </div>
       </div>
 
@@ -551,273 +195,36 @@
         <span>🔔</span>
         <h2>Smart Alerts</h2>
       </div>
-      <p class="section-sub" style="margin-bottom:10px;">Generated from live Firestore + BME680 data</p>
+      <p class="section-sub" style="margin-bottom:10px;">Generated from live Firestore data</p>
 
-      <div class="alert-list">
+      <div class="alert-list" id="alertList">
         <div class="alert-card">
-          <div class="alert-dot green"></div>
+          <div class="alert-dot" id="connDot" style="background:var(--muted)"></div>
           <div>
-            <div class="alert-title">✅ Firestore Connected</div>
-            <div class="alert-body">Fetched <strong>48</strong> documents from <strong>toilet_1</strong>.</div>
-          </div>
-        </div>
-        <div class="alert-card" id="vocAlertCard" style="border-color:#f0a50055;">
-          <div class="alert-dot amber" id="vocAlertDot"></div>
-          <div>
-            <div class="alert-title" id="vocAlertTitle">⚠️ VOC Moderate — 142 IAQ</div>
-            <div class="alert-body" id="vocAlertBody">Gas level near threshold. Consider ventilating <strong>toilet_1</strong>.</div>
-          </div>
-        </div>
-        <div class="alert-card">
-          <div class="alert-dot green"></div>
-          <div>
-            <div class="alert-title">🌡️ Temp &amp; Humidity Normal</div>
-            <div class="alert-body">BME680 reads <strong>28.4°C</strong> / <strong>67% RH</strong> — within range.</div>
+            <div class="alert-title" id="connTitle">⏳ Connecting to Firestore...</div>
+            <div class="alert-body" id="connBody">Waiting for data...</div>
           </div>
         </div>
       </div>
-
-      <div class="footer">
-        <div class="wc-icon">🚻</div>
-        <div>
-          <div class="footer-name">AirLoo</div>
-          <div class="footer-by">by Circuitbay</div>
-        </div>
-      </div>
-      <div class="footer-copy">© 2026 AirLoo · Built by Nikhil Das</div>
     </div>
 
   </div>
 
+  <!-- FOOTER -->
+  <footer class="dash-footer">
+    <div class="dash-footer-brand">
+      <img src="../none.png" alt="" style="height:32px;">
+      <div>
+        <div style="font-weight:600;font-size:14px;color:var(--text);">AirLoo</div>
+        <div style="font-size:10px;color:var(--muted);">by Circuitbay</div>
+      </div>
+    </div>
+    <div class="dash-footer-copy">© 2026 AirLoo · Built by Nikhil Das</div>
+  </footer>
+
   <div class="tooltip" id="tooltip"></div>
 
-<script>
-/* ══ State ══ */
-let vocHistory = [88,95,102,118,125,130,122,140,145,142,138,145,155,160,148,142,
-                  136,128,120,115,108,118,130,142,150,158,162,148,142,142];
-let threshold  = 150;
-let currentVOC = 142;
-
-/* ══ Gauge ══ */
-function updateGauge(val) {
-  const pct = Math.min(Math.max(val / 300, 0), 1);
-  const rad = (-180 + pct * 180) * Math.PI / 180;
-  const x2 = 100 + 72 * Math.cos(rad);
-  const y2 = 100 + 72 * Math.sin(rad);
-  document.getElementById('gaugeNeedle').setAttribute('x2', x2.toFixed(1));
-  document.getElementById('gaugeNeedle').setAttribute('y2', y2.toFixed(1));
-  document.getElementById('gaugeReading').textContent = Math.round(val);
-  const col = val < 100 ? '#2ecc71' : val < threshold ? '#f0a500' : '#ff4757';
-  document.getElementById('gaugeReading').style.color = col;
-  document.getElementById('gaugeNeedle').setAttribute('stroke', col);
-}
-
-/* ══ Alerts ══ */
-function updateAlerts(val) {
-  const banner  = document.getElementById('vocBanner');
-  const icon    = document.getElementById('bannerIcon');
-  const title   = document.getElementById('bannerTitle');
-  const sub     = document.getElementById('bannerSub');
-  const bval    = document.getElementById('bannerVal');
-  const gStatus = document.getElementById('gaugeStatus');
-  const aCard   = document.getElementById('vocAlertCard');
-  const aDot    = document.getElementById('vocAlertDot');
-  const aTitle  = document.getElementById('vocAlertTitle');
-  const aBody   = document.getElementById('vocAlertBody');
-
-  bval.textContent = Math.round(val);
-
-  if (val < 100) {
-    banner.className = 'voc-banner good';
-    icon.textContent = '✅';
-    title.textContent = 'Good Air Quality';
-    title.className = 'voc-banner-title good';
-    bval.className  = 'voc-banner-val good';
-    sub.textContent = 'VOC levels within safe range. Air is clean.';
-    gStatus.textContent = 'GOOD'; gStatus.style.color = '#2ecc71';
-    aCard.style.borderColor = '#2ecc7155'; aDot.className = 'alert-dot green';
-    aTitle.textContent = '✅ VOC Good — ' + Math.round(val) + ' IAQ';
-    aBody.innerHTML = 'Air quality is <strong>good</strong> at <strong>toilet_1</strong>.';
-  } else if (val < threshold) {
-    banner.className = 'voc-banner moderate';
-    icon.textContent = '⚠️';
-    title.textContent = 'Moderate Air Quality';
-    title.className = 'voc-banner-title moderate';
-    bval.className  = 'voc-banner-val moderate';
-    sub.textContent = 'VOC index approaching threshold. Ventilation recommended.';
-    gStatus.textContent = 'MODERATE'; gStatus.style.color = '#f0a500';
-    aCard.style.borderColor = '#f0a50055'; aDot.className = 'alert-dot amber';
-    aTitle.textContent = '⚠️ VOC Moderate — ' + Math.round(val) + ' IAQ';
-    aBody.innerHTML = 'Gas near threshold. Consider ventilating <strong>toilet_1</strong>.';
-  } else {
-    banner.className = 'voc-banner danger';
-    icon.textContent = '🚨';
-    title.textContent = 'DANGER — Threshold Exceeded!';
-    title.className = 'voc-banner-title danger';
-    bval.className  = 'voc-banner-val danger';
-    sub.textContent = 'Critical VOC level detected! Immediate ventilation required.';
-    gStatus.textContent = 'DANGER'; gStatus.style.color = '#ff4757';
-    aCard.style.borderColor = '#ff475788'; aDot.className = 'alert-dot red';
-    aTitle.textContent = '🚨 VOC DANGER — ' + Math.round(val) + ' IAQ';
-    aBody.innerHTML = '<strong>CRITICAL:</strong> Exceeded at <strong>toilet_1</strong>. Ventilate now!';
-  }
-}
-
-/* ══ Line Chart ══ */
-function drawChart() {
-  const canvas = document.getElementById('vocChart');
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.clientWidth || 360, H = 130;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, W, H);
-
-  const pad = {t:8, r:10, b:22, l:30};
-  const iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
-  const data = vocHistory;
-  const maxV = 300;
-
-  [0, 100, threshold, 200, 300].forEach(v => {
-    const y = pad.t + iH - (v / maxV) * iH;
-    ctx.beginPath();
-    ctx.strokeStyle = v === threshold ? '#f0a50044' : '#1e3a5644';
-    ctx.lineWidth = v === threshold ? 1.5 : 1;
-    ctx.setLineDash(v === threshold ? [4,3] : [2,4]);
-    ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + iW, y);
-    ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = v === threshold ? '#f0a500aa' : '#6b8fa8';
-    ctx.font = '8px IBM Plex Mono,monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(v === threshold ? '⚑' + v : v, pad.l - 3, y + 3);
-  });
-
-  const ty = pad.t + iH - (threshold / maxV) * iH;
-  ctx.fillStyle = 'rgba(255,71,87,0.06)';
-  ctx.fillRect(pad.l, pad.t, iW, ty - pad.t);
-
-  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + iH);
-  grad.addColorStop(0, 'rgba(0,212,200,0.22)');
-  grad.addColorStop(1, 'rgba(0,212,200,0)');
-  ctx.beginPath();
-  data.forEach((v, i) => {
-    const x = pad.l + (i / (data.length - 1)) * iW;
-    const y = pad.t + iH - (v / maxV) * iH;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.lineTo(pad.l + iW, pad.t + iH);
-  ctx.lineTo(pad.l, pad.t + iH);
-  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-
-  ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = '#00d4c8'; ctx.setLineDash([]);
-  data.forEach((v, i) => {
-    const x = pad.l + (i / (data.length - 1)) * iW;
-    const y = pad.t + iH - (v / maxV) * iH;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }); ctx.stroke();
-
-  const lx = pad.l + iW;
-  const ly = pad.t + iH - (data[data.length-1] / maxV) * iH;
-  const dc = data[data.length-1] < 100 ? '#2ecc71' : data[data.length-1] < threshold ? '#f0a500' : '#ff4757';
-  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI*2);
-  ctx.fillStyle = dc; ctx.fill();
-  ctx.strokeStyle = '#0d1b2a'; ctx.lineWidth = 1.5; ctx.stroke();
-
-  ctx.fillStyle = '#6b8fa8'; ctx.font = '8px IBM Plex Mono,monospace'; ctx.textAlign = 'center';
-  ['-30m','-20m','-10m','now'].forEach((l, i) => {
-    ctx.fillText(l, pad.l + (i/3)*iW, H - 5);
-  });
-}
-
-/* ══ Heatmap ══ */
-function buildHeatmap() {
-  const grid = document.getElementById('heatmapGrid');
-  grid.innerHTML = '';
-  const days  = ['Mon','Tue','Wed','Thu','Fri'];
-  const hours = ['0h','2h','4h','6h','8h','10h','12h','14h','16h','18h','20h','22h'];
-  const rawData = [
-    [20,18,15,30,45,90,130,162,148,120,95,60],
-    [18,15,12,25,40,85,120,158,142,115,88,55],
-    [22,20,18,35,55,95,140,170,155,130,100,70],
-    [25,22,20,40,60,100,145,175,160,138,108,75],
-    [28,24,20,45,68,110,152,180,162,142,112,80],
-  ];
-  const tooltip = document.getElementById('tooltip');
-
-  grid.appendChild(document.createElement('div'));
-  hours.forEach(h => {
-    const el = document.createElement('div');
-    el.className = 'hm-col-label'; el.textContent = h;
-    grid.appendChild(el);
-  });
-
-  days.forEach((day, di) => {
-    const rl = document.createElement('div');
-    rl.className = 'hm-label'; rl.textContent = day;
-    grid.appendChild(rl);
-    rawData[di].forEach((val, hi) => {
-      const cell = document.createElement('div');
-      cell.className = 'hm-cell';
-      const pct = Math.min(val / 200, 1);
-      let r, g, b;
-      if (pct < .5) {
-        r = Math.round(pct*2*240); g = Math.round(160 + pct*2*40); b = 40;
-      } else {
-        r = Math.round(240 + (pct-.5)*2*15); g = Math.round(200 - (pct-.5)*2*160); b = 40;
-      }
-      cell.style.background = `rgb(${r},${g},${b})`;
-      cell.style.opacity = 0.25 + pct * 0.75;
-      cell.addEventListener('mousemove', e => {
-        tooltip.style.display = 'block';
-        tooltip.style.left = (e.clientX + 10) + 'px';
-        tooltip.style.top  = (e.clientY - 28) + 'px';
-        tooltip.textContent = `${day} ${hours[hi]}: ${val} IAQ`;
-      });
-      cell.addEventListener('mouseleave', () => tooltip.style.display = 'none');
-      grid.appendChild(cell);
-    });
-  });
-}
-
-/* ══ Threshold Slider ══ */
-const slider = document.getElementById('threshSlider');
-slider.addEventListener('input', () => {
-  threshold = parseInt(slider.value);
-  document.getElementById('threshDisplay').textContent = threshold + ' IAQ';
-  document.getElementById('gaugeThreshLabel').textContent = threshold + ' IAQ';
-  document.getElementById('zoneModerate').innerHTML = `⚠️ MODERATE<br>100–${threshold}`;
-  document.getElementById('zoneDanger').innerHTML   = `🚨 DANGER<br>&gt;${threshold}`;
-  const pct = ((threshold - 50) / 250) * 100;
-  slider.style.background = `linear-gradient(to right, var(--cyan) 0%, var(--cyan) ${pct}%, var(--border) ${pct}%)`;
-  updateAlerts(currentVOC);
-  drawChart();
-});
-slider.style.background = `linear-gradient(to right, var(--cyan) 0%, var(--cyan) 40%, var(--border) 40%)`;
-
-/* ══ Live tick every 3s ══ */
-function tick() {
-  const delta = (Math.random() - 0.44) * 14;
-  currentVOC = Math.max(30, Math.min(285, currentVOC + delta));
-  vocHistory.push(Math.round(currentVOC));
-  if (vocHistory.length > 30) vocHistory.shift();
-  updateGauge(currentVOC);
-  updateAlerts(currentVOC);
-  drawChart();
-  document.getElementById('envTemp').textContent = (28.4 + (Math.random()-.5)*.5).toFixed(1) + '°';
-  document.getElementById('envHum').textContent  = Math.round(67 + (Math.random()-.5)*3) + '%';
-  document.getElementById('envPres').textContent = Math.round(1012 + (Math.random()-.5)*2);
-  const now = new Date();
-  document.getElementById('syncTime').textContent =
-    now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-}
-
-/* ══ Init ══ */
-updateGauge(currentVOC);
-updateAlerts(currentVOC);
-buildHeatmap();
-window.addEventListener('resize', drawChart);
-setTimeout(drawChart, 80);
-setInterval(tick, 3000);
-</script>
+<script src="env.js"></script>
+<script src="dashboard.js"></script>
 </body>
 </html>

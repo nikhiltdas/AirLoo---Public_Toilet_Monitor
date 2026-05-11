@@ -151,6 +151,58 @@ Sensor data is uploaded through Wi-Fi to a dashboard for monitoring and analytic
 
 ---
 
+## Configuration
+
+### Secrets (`secrets.h`)
+
+The ESP32 firmware requires a `Firebase/secrets.h` file for Wi-Fi and Firebase credentials.  
+Use `Firebase/secrets.h.example` as a template:
+
+```cpp
+#define WIFI_SSID "your_wifi_ssid"
+#define WIFI_PASS "your_wifi_password"
+#define API_KEY "your_firebase_api_key"
+```
+
+Rename the example file and fill in your values:
+
+```bash
+cp Firebase/secrets.h.example Firebase/secrets.h
+```
+
+This file is already gitignored to prevent accidental credential leaks.
+
+### Firebase Project ID
+
+The Firebase project ID is configured directly in `Firebase/Firebase.ino`:
+
+```cpp
+String projectId = "your-firebase-project-id";
+```
+
+### Dashboard
+
+The monitoring dashboard (`dashboard/dashboard.html`) is a static frontend.  
+Firebase credentials are configured via `dashboard/env.js` (gitignored).  
+
+Use the example template to set up your config:
+
+```bash
+cp dashboard/env.example.js dashboard/env.js
+```
+
+Then edit `dashboard/env.js` with your Firebase project details:
+
+```js
+const ENV = {
+  FIREBASE_PROJECT_ID: 'your_firebase_project_id',
+  FIREBASE_API_KEY: 'your_firebase_api_key',
+  FIRESTORE_COLLECTION: 'events',
+};
+```
+
+---
+
 ## Future Enhancements
 
 - Water level monitoring  

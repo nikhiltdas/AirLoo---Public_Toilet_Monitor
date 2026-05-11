@@ -4,7 +4,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "time.h"
-#include "secrets.h"   // 🔐 your credentials here
+#include "secrets.h" 
 
 // -------- OLED --------
 #define SCREEN_WIDTH 128
@@ -150,7 +150,6 @@ void sendToFirestore(String eventType, String timestamp) {
 
     String payload = "{ \"fields\": {"
                      "\"event\": {\"stringValue\": \"" + eventType + "\"},"
-                     "\"status\": {\"stringValue\": \"" + eventType + "\"},"
                      "\"openCount\": {\"integerValue\": \"" + String(openCount) + "\"},"
                      "\"closeCount\": {\"integerValue\": \"" + String(closeCount) + "\"},"
                      "\"timestamp\": {\"timestampValue\": \"" + timestamp + "\"},"
