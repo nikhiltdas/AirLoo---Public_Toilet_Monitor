@@ -139,9 +139,9 @@ Sensor data is uploaded through Wi-Fi to a dashboard for monitoring and analytic
 
 ### Hardware Setup
 
-1. Connect BME680 via I2C  
-2. Connect magnetic switch to digital GPIO pin  
-3. Power ESP32 using USB or adapter  
+1. Connect BME680 via I2C (SDA→GPIO21, SCL→GPIO22)
+2. Connect magnetic reed switch to **GPIO4** (RTC GPIO — required for deep sleep wake)
+3. Power ESP32 using USB, adapter, or battery (Li-ion 18650 + TP4056)
 4. Mount sensors inside toilet enclosure safely
 
 ### Software Setup
@@ -243,6 +243,48 @@ Every push to `main` triggers a deployment that injects these secrets into `dash
 |--------|------|----------|
 | Hold BOOT 5s (operation) | GPIO0 | Restarts config portal (password required) |
 | Hold BOOT on power-up | GPIO0 | Factory reset (clears all saved data) |
+
+---
+
+## Battery Operation
+
+The firmware is optimized for deep-sleep battery operation using `esp_sleep_enable_ext0_wakeup` on GPIO4 (reed switch).
+
+### Power Architecture
+
+- ESP32 spends **99%+ of time in deep sleep** (~10 µA)
+- Reed switch state change (GPIO4, RTC GPIO) wakes the ESP32
+- ESP32 boots, connects WiFi, sends event to Firestore, shows OLED for 3s, then goes back to sleep
+- Wake level alternates between HIGH/LOW to detect both OPEN and CLOSE events
+- OLED is powered off via command (`SSD1306_DISPLAYOFF`) before sleep
+- WiFi is fully disconnected and radio turned off before sleep
+- CPU runs at 80 MHz to reduce active power draw
+- Modem sleep enabled during WiFi idle (`WiFi.setSleep(true)`)
+
+### Estimated Battery Life
+
+| Events/day | Active time | Avg current | Battery life (2000 mAh) |
+|-----------|-------------|-------------|------------------------|
+| 50 | ~4 min | ~0.8 mA | **~100 days** |
+| 100 | ~8 min | ~1.6 mA | **~50 days** |
+| 200 | ~17 min | ~3.2 mA | **~25 days** |
+
+Assumes ~3s WiFi connect + ~3s OLED display per event. Actual life depends on WiFi signal strength and battery chemistry (Li-ion recommended).
+
+### Cold Boot (Power On)
+
+On a cold boot (not from deep sleep), the firmware:
+1. Shows the current door state on OLED
+2. Goes to deep sleep **without sending a false event**
+3. Normal door events trigger wake + send as usual
+
+### Battery Tips
+
+- Use a **Li-ion 18650** (2000–3000 mAh) with a TP4056 charger module
+- Add a **P-channel MOSFET** to cut OLED power completely during sleep (the software OFF command still has ~1 µA leakage)
+- Keep WiFi signal strong — weak signal increases connection time and power draw
+- Disable the OLED in `secrets.h` if not needed (comment out the display code)
+- For extreme battery life, consider batching events and sending every N wakes instead of each event
 
 ---
 
