@@ -350,6 +350,25 @@ void setup() {
 }
 
 void loop() {
+  static unsigned long btnPressStart = 0;
+  if (digitalRead(RESET_PIN) == LOW) {
+    if (btnPressStart == 0) btnPressStart = millis();
+    else if (millis() - btnPressStart > 5000) {
+      Serial.println("BOOT held 5s — clearing WiFi and restarting...");
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(WHITE);
+      display.setCursor(0, 5);
+      display.print("Resetting WiFi...");
+      display.display();
+      clearCredentials();
+      delay(1000);
+      ESP.restart();
+    }
+  } else {
+    btnPressStart = 0;
+  }
+
   reedState = digitalRead(REED_PIN);
 
   if (reedState != lastReedState && millis() - lastTrigger > 300) {
