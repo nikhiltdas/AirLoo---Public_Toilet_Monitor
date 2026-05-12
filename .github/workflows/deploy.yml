@@ -1,0 +1,42 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create env.js from secrets
+        run: |
+          cat > dashboard/env.js << 'EOF'
+          const ENV = {
+            FIREBASE_PROJECT_ID: '${{ secrets.FIREBASE_PROJECT_ID }}',
+            FIREBASE_API_KEY: '${{ secrets.FIREBASE_API_KEY }}',
+            FIRESTORE_COLLECTION: '${{ secrets.FIRESTORE_COLLECTION }}',
+          };
+          EOF
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

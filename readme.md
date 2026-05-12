@@ -91,6 +91,8 @@ Sensor data is uploaded through Wi-Fi to a dashboard for monitoring and analytic
 - Automated cleaning alerts  
 - Historical data logging  
 - Scalable multi-location deployment  
+- **WiFi Manager with password-protected config portal**  
+- **Over-the-air WiFi reconfiguration**  
 
 ---
 
@@ -129,7 +131,7 @@ Sensor data is uploaded through Wi-Fi to a dashboard for monitoring and analytic
 - Arduino IDE  
 - HTML / CSS / JavaScript Dashboard  
 - Firebase / Cloud Database  
-- Wi-Fi Connectivity  
+- GitHub Actions (CI/CD deployment)  
 
 ---
 
@@ -137,30 +139,67 @@ Sensor data is uploaded through Wi-Fi to a dashboard for monitoring and analytic
 
 ### Hardware Setup
 
-1. Connect BME680 via I2C  
-2. Connect magnetic switch to digital GPIO pin  
-3. Power ESP32 using USB or adapter  
+1. Connect BME680 via I2C (SDA→GPIO21, SCL→GPIO22)
+2. Connect magnetic reed switch to **GPIO4** (RTC GPIO — required for deep sleep wake)
+3. Power ESP32 using USB, adapter, or battery (Li-ion 18650 + TP4056)
 4. Mount sensors inside toilet enclosure safely
 
 ### Software Setup
 
-1. Upload firmware to ESP32  
-2. Configure Wi-Fi credentials  
-3. Configure cloud database credentials  
-4. Open monitoring dashboard  
+1. Upload firmware to ESP32 via Arduino IDE  
+2. On first boot, ESP32 creates a Wi-Fi access point named **`AirLoo-Config`**  
+3. Connect to that AP and open **`http://192.168.4.1`** in your browser  
+4. Select your Wi-Fi network, enter credentials, and set an **admin password**  
+5. ESP32 reboots and connects to your network automatically  
+
+---
+
+## WiFi Manager — Configuration Portal
+
+The ESP32 includes a built-in WiFi Manager that eliminates the need to hardcode Wi-Fi credentials.
+
+### First-Time Setup
+
+1. Power on the ESP32  
+2. Connect your phone/laptop to the **`AirLoo-Config`** Wi-Fi AP  
+3. Open a browser to **`http://192.168.4.1`**  
+4. Select your Wi-Fi network from the scanned list  
+5. Enter your Wi-Fi password  
+6. **Create an admin password** (min 4 characters) to protect the config portal  
+7. Click "Connect" — the device saves credentials and reboots  
+
+### Reconfiguring Wi-Fi Later
+
+- **Hold the BOOT button (GPIO0) for 5 seconds** during normal operation  
+- The device restarts into config portal mode  
+- **Enter your admin password** when prompted, then change Wi-Fi settings  
+
+### Factory Reset
+
+- **Hold the BOOT button while powering on** the device  
+- This clears all saved data (Wi-Fi credentials + admin password)  
+- Device boots into first-time setup mode  
+
+### Security
+
+| Threat | Protection |
+|--------|-----------|
+| Someone holds BOOT button | Config portal starts but **admin password is required** to make changes |
+| Random person connects to `AirLoo-Config` | Sees a login page — can't proceed without the password |
+| Physical tampering | Full factory reset requires holding BOOT **at the moment of power-on** |
 
 ---
 
 ## Configuration
 
-### Secrets (`secrets.h`)
+### ESP32 Firmware (`secrets.h`)
 
-The ESP32 firmware requires a `Firebase/secrets.h` file for Wi-Fi and Firebase credentials.  
+The ESP32 firmware only needs the Firebase API key in `Firebase/secrets.h`.  
+Wi-Fi credentials are configured through the web portal (not stored in code).
+
 Use `Firebase/secrets.h.example` as a template:
 
 ```cpp
-#define WIFI_SSID "your_wifi_ssid"
-#define WIFI_PASS "your_wifi_password"
 #define API_KEY "your_firebase_api_key"
 ```
 
@@ -170,7 +209,7 @@ Rename the example file and fill in your values:
 cp Firebase/secrets.h.example Firebase/secrets.h
 ```
 
-This file is already gitignored to prevent accidental credential leaks.
+This file is gitignored to prevent accidental credential leaks.
 
 ### Firebase Project ID
 
@@ -182,24 +221,70 @@ String projectId = "your-firebase-project-id";
 
 ### Dashboard
 
-The monitoring dashboard (`dashboard/dashboard.html`) is a static frontend.  
-Firebase credentials are configured via `dashboard/env.js` (gitignored).  
+The monitoring dashboard (`dashboard/dashboard.html`) is a static frontend hosted on **GitHub Pages**.  
 
-Use the example template to set up your config:
+Firebase credentials are injected at deploy time via **GitHub Actions** (never committed to the repo).  
 
-```bash
-cp dashboard/env.example.js dashboard/env.js
-```
+Set the following **repository secrets** in `Settings → Secrets and variables → Actions`:
 
-Then edit `dashboard/env.js` with your Firebase project details:
+| Secret | Value |
+|--------|-------|
+| `FIREBASE_PROJECT_ID` | Your Firebase project ID |
+| `FIREBASE_API_KEY` | Your Firebase API key |
+| `FIRESTORE_COLLECTION` | Collection name (e.g. `events`) |
 
-```js
-const ENV = {
-  FIREBASE_PROJECT_ID: 'your_firebase_project_id',
-  FIREBASE_API_KEY: 'your_firebase_api_key',
-  FIRESTORE_COLLECTION: 'events',
-};
-```
+Every push to `main` triggers a deployment that injects these secrets into `dashboard/env.js` and publishes to GitHub Pages.
+
+---
+
+## Button Controls Summary
+
+| Action | GPIO | Behavior |
+|--------|------|----------|
+| Hold BOOT 5s (operation) | GPIO0 | Restarts config portal (password required) |
+| Hold BOOT on power-up | GPIO0 | Factory reset (clears all saved data) |
+
+---
+
+## Battery Operation
+
+The firmware is optimized for deep-sleep battery operation using `esp_sleep_enable_ext0_wakeup` on GPIO4 (reed switch).
+
+### Power Architecture
+
+- ESP32 spends **99%+ of time in deep sleep** (~10 µA)
+- Reed switch state change (GPIO4, RTC GPIO) wakes the ESP32
+- ESP32 boots, connects WiFi, sends event to Firestore, shows OLED for 3s, then goes back to sleep
+- Wake level alternates between HIGH/LOW to detect both OPEN and CLOSE events
+- OLED is powered off via command (`SSD1306_DISPLAYOFF`) before sleep
+- WiFi is fully disconnected and radio turned off before sleep
+- CPU runs at 80 MHz to reduce active power draw
+- Modem sleep enabled during WiFi idle (`WiFi.setSleep(true)`)
+
+### Estimated Battery Life
+
+| Events/day | Active time | Avg current | Battery life (2000 mAh) |
+|-----------|-------------|-------------|------------------------|
+| 50 | ~4 min | ~0.8 mA | **~100 days** |
+| 100 | ~8 min | ~1.6 mA | **~50 days** |
+| 200 | ~17 min | ~3.2 mA | **~25 days** |
+
+Assumes ~3s WiFi connect + ~3s OLED display per event. Actual life depends on WiFi signal strength and battery chemistry (Li-ion recommended).
+
+### Cold Boot (Power On)
+
+On a cold boot (not from deep sleep), the firmware:
+1. Shows the current door state on OLED
+2. Goes to deep sleep **without sending a false event**
+3. Normal door events trigger wake + send as usual
+
+### Battery Tips
+
+- Use a **Li-ion 18650** (2000–3000 mAh) with a TP4056 charger module
+- Add a **P-channel MOSFET** to cut OLED power completely during sleep (the software OFF command still has ~1 µA leakage)
+- Keep WiFi signal strong — weak signal increases connection time and power draw
+- Disable the OLED in `secrets.h` if not needed (comment out the display code)
+- For extreme battery life, consider batching events and sending every N wakes instead of each event
 
 ---
 
